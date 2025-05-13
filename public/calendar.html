@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>S&S Family App - Calendar</title>
+    <script
+      type="module"
+      src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/css/ionic.bundle.min.css"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      ion-content {
+        --background: var(--ion-color-light);
+      }
+      #calendar {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 0 10px;
+      }
+      ion-card {
+        margin: 16px;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      ion-button {
+        --border-radius: 8px;
+      }
+      ion-toolbar {
+        --background: #ff9800;
+        --color: #ffffff;
+      }
+      ion-menu {
+        --background: #ffffff;
+        --color: #000000;
+      }
+      ion-menu ion-item {
+        --background: #ffffff;
+        --color: #000000;
+        --background-activated: #ff9800;
+        --color-activated: #ffffff;
+      }
+      ion-menu-button {
+        --color: #ffffff;
+      }
+      @media (max-width: 768px) {
+        ion-menu ion-item {
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <ion-app>
+      <ion-menu content-id="main-content" side="start">
+        <ion-header>
+          <ion-toolbar style="--background: #ff9800; --color: #ffffff">
+            <ion-title>Menu</ion-title>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content>
+          <ion-list>
+            <ion-item href="/index.html">Dashboard</ion-item>
+            <ion-item href="/calendar.html">Calendar</ion-item>
+            <ion-item href="/tasks.html">Tasks</ion-item>
+            <ion-item href="/chat.html">Chat</ion-item>
+            <ion-item href="/family.html">Family</ion-item>
+            <ion-item id="signOut">Sign Out</ion-item>
+          </ion-list>
+        </ion-content>
+      </ion-menu>
+      <div class="ion-page" id="main-content">
+        <ion-header>
+          <ion-toolbar>
+            <ion-buttons slot="start">
+              <ion-menu-button></ion-menu-button>
+            </ion-buttons>
+            <ion-title>S&S Family App - Calendar</ion-title>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content class="ion-padding">
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>Add Event</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <form id="event_form" class="ion-padding">
+                <ion-item>
+                  <ion-label position="stacked">Event Title</ion-label>
+                  <ion-input
+                    type="text"
+                    name="title"
+                    id="title"
+                    placeholder="Enter event title"
+                    required
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-label position="stacked">Start Date & Time</ion-label>
+                  <ion-datetime
+                    name="start_datetime"
+                    id="start_datetime"
+                    display-format="YYYY-MM-DD HH:mm"
+                    required
+                  ></ion-datetime>
+                </ion-item>
+                <ion-item>
+                  <ion-label position="stacked">End Date & Time (Optional)</ion-label>
+                  <ion-datetime
+                    name="end_datetime"
+                    id="end_datetime"
+                    display-format="YYYY-MM-DD HH:mm"
+                  ></ion-datetime>
+                </ion-item>
+                <ion-item>
+                  <ion-label position="stacked">Reminder (Optional)</ion-label>
+                  <ion-datetime
+                    name="reminder_datetime"
+                    id="reminder_datetime"
+                    display-format="YYYY-MM-DD HH:mm"
+                  ></ion-datetime>
+                </ion-item>
+                <ion-button
+                  expand="block"
+                  type="submit"
+                  style="--background: #ff9800; --color: #ffffff"
+                  class="ion-margin-top"
+                >Add Event</ion-button>
+              </form>
+            </ion-card-content>
+          </ion-card>
+          <div id="calendar"></div>
+        </ion-content>
+        <ion-footer>
+          <ion-toolbar style="--background: #232428; --color: #ffffff">
+            <ion-title size="small" class="ion-text-center">
+              © 2025 S&S Family App. All rights reserved.
+            </ion-title>
+          </ion-toolbar>
+        </ion-footer>
+      </div>
+    </ion-app>
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script>
+      const token = localStorage.getItem("token") || "";
+      if (!token) {
+        window.location.href = "/login.html";
+      }
+
+      document.getElementById("signOut").addEventListener("click", () => {
+        if (token) {
+          localStorage.removeItem("token");
+          window.location.href = `/logout?token=${encodeURIComponent(token)}`;
+        } else {
+          window.location.href = "/login.html";
+        }
+      });
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const calendarEl = document.getElementById("calendar");
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: "dayGridMonth",
+          headerToolbar: {
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay",
+          },
+          events: async (fetchInfo, successCallback, failureCallback) => {
+            try {
+              const response = await fetch("/calendar", {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: token,
+                },
+              });
+              const data = await response.json();
+              if (!response.ok) {
+                if (data.error === "User not in a family") {
+                  const toast = document.createElement("ion-toast");
+                  toast.message = "Please create or join a family first";
+                  toast.duration = 3000;
+                  toast.color = "warning";
+                  toast.buttons = [
+                    {
+                      text: "Go to Family",
+                      handler: () => {
+                        window.location.href = "/family.html";
+                      },
+                    },
+                  ];
+                  document.body.appendChild(toast);
+                  toast.present();
+                }
+                throw new Error(data.error || "Failed to fetch events");
+              }
+              const events = data.events.map((event) => ({
+                id: event.id,
+                title: event.title,
+                start: event.start_datetime,
+                end: event.end_datetime,
+              }));
+              successCallback(events);
+            } catch (error) {
+              failureCallback(error);
+            }
+          },
+          eventClick: (info) => {
+            alert(`Event: ${info.event.title}\nStart: ${info.event.start}`);
+          },
+        });
+        calendar.render();
+
+        document
+          .getElementById("event_form")
+          .addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const title = formData.get("title");
+            const start_datetime = formData.get("start_datetime");
+            const end_datetime = formData.get("end_datetime");
+            const reminder_datetime = formData.get("reminder_datetime");
+
+            try {
+              const response = await fetch("/calendar", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: token,
+                },
+                body: JSON.stringify({
+                  title,
+                  start_datetime,
+                  end_datetime,
+                  reminder_datetime,
+                }),
+              });
+              const data = await response.json();
+              if (!response.ok) {
+                if (data.error === "User not in a family") {
+                  const toast = document.createElement("ion-toast");
+                  toast.message = "Please create or join a family first";
+                  toast.duration = 3000;
+                  toast.color = "warning";
+                  toast.buttons = [
+                    {
+                      text: "Go to Family",
+                      handler: () => {
+                        window.location.href = "/family.html";
+                      },
+                    },
+                  ];
+                  document.body.appendChild(toast);
+                  toast.present();
+                } else {
+                  throw new Error(data.error || "Failed to create event");
+                }
+              } else {
+                calendar.refetchEvents();
+                const toast = document.createElement("ion-toast");
+                toast.message = "Event Created";
+                toast.duration = 2000;
+                toast.color = "success";
+                document.body.appendChild(toast);
+                toast.present();
+                form.reset();
+              }
+            } catch (error) {
+              const toast = document.createElement("ion-toast");
+              toast.message = error.message;
+              toast.duration = 2000;
+              toast.color = "danger";
+              document.body.appendChild(toast);
+              toast.present();
+            }
+          });
+      });
+    </script>
+  </body>
+</html>
