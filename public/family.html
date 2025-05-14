@@ -27,11 +27,11 @@
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item href="/index.html"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
-            <ion-item href="/calendar.html"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
-            <ion-item href="/tasks.html"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
-            <ion-item href="/chat.html"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
-            <ion-item href="/family.html"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
+            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
+            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
+            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
+            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
+            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
             <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>Sign Out</ion-item>
           </ion-list>
         </ion-content>
@@ -135,149 +135,186 @@
     </ion-app>
 
     <script>
-      const token = localStorage.getItem("token") || "";
-      if (!token) {
-        window.location.href = "/login.html";
-      }
-
-      const signOut = document.getElementById("signOut");
-
-      async function fetchFamilies() {
-        try {
-          const response = await fetch("/my-families", {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: token,
-            },
-          });
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || "Failed to fetch families");
-          }
-
-          const familyList = document.getElementById("family-list");
-          familyList.innerHTML = "";
-
-          if (data.families.length === 0) {
-            familyList.innerHTML = `<ion-item><ion-label>No families found</ion-label></ion-item>`;
-          } else {
-            data.families.forEach(family => {
-              const item = document.createElement("ion-item");
-              item.innerHTML = `
-                <ion-avatar slot="start">
-                  <img src="/assets/family-${family.id}.png" alt="${family.name}" />
-                </ion-avatar>
-                <ion-label>
-                  <h2>${family.name}</h2>
-                  <p>ID: ${family.id} | Role: ${family.role || 'Owner'}</p>
-                </ion-label>
-              `;
-              familyList.appendChild(item);
-            });
-          }
-        } catch (error) {
-          const toast = document.createElement("ion-toast");
-          toast.message = error.message;
-          toast.duration = 2000;
-          toast.color = "danger";
-          document.body.appendChild(toast);
-          toast.present();
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("DOM loaded");
+        console.log("Ionic version:", window.Ionic?.version || "Not loaded");
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        if (!token) {
+          console.log("No token found, redirecting to /login.html");
+          window.location.href = "/login.html";
+          return;
         }
-      }
+        console.log("Token found:", token);
 
-      fetchFamilies();
-
-      document.getElementById("create_family_form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-        const name = formData.get("name");
-
-        try {
-          const response = await fetch("/family", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: token,
-            },
-            body: JSON.stringify({ name }),
+        // Menu navigation
+        const navItems = {
+          "nav-dashboard": "/index.html",
+          "nav-calendar": "/calendar.html",
+          "nav-tasks": "/tasks.html",
+          "nav-chat": "/chat.html",
+          "nav-family": "/family.html",
+        };
+        Object.keys(navItems).forEach((id) => {
+          const item = document.getElementById(id);
+          item.addEventListener("click", () => {
+            const url = navItems[id];
+            console.log(`Navigating to ${url}`);
+            window.location.href = url;
           });
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || "Failed to create family");
-          }
-          const toast = document.createElement("ion-toast");
-          toast.message = `Family Created (ID: ${data.family_id})`;
-          toast.duration = 2000;
-          toast.color = "success";
-          document.body.appendChild(toast);
-          toast.present();
-          form.reset();
-          fetchFamilies();
-        } catch (error) {
-          const toast = document.createElement("ion-toast");
-          toast.message = error.message;
-          toast.duration = 2000;
-          toast.color = "danger";
-          document.body.appendChild(toast);
-          toast.present();
-        }
-      });
+        });
 
-      document.getElementById("join_family_form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-        const family_id = formData.get("family_id");
-
-        try {
-          const response = await fetch("/family/join", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: token,
-            },
-            body: JSON.stringify({ family_id }),
-          });
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || "Failed to join family");
-          }
-          const toast = document.createElement("ion-toast");
-          toast.message = "Joined Family";
-          toast.duration = 2000;
-          toast.color = "success";
-          document.body.appendChild(toast);
-          toast.present();
-          form.reset();
-          fetchFamilies();
-        } catch (error) {
-          const toast = document.createElement("ion-toast");
-          toast.message = error.message;
-          toast.duration = 2000;
-          toast.color = "danger";
-          document.body.appendChild(toast);
-          toast.present();
-        }
-      });
-
-      signOut.addEventListener("click", async () => {
-        if (token) {
+        // Sign out
+        document.getElementById("signOut").addEventListener("click", async () => {
+          console.log("Sign out clicked");
           try {
-            await fetch(`/logout?token=${encodeURIComponent(token)}`, {
+            await fetch(`http://localhost:8100/logout?token=${encodeURIComponent(token)}`, {
               method: "GET",
             });
             localStorage.removeItem("token");
+            sessionStorage.removeItem("token");
+            console.log("Logged out, cleared token");
             window.location.href = "/login.html";
           } catch (err) {
             console.error("Error during sign out:", err);
             localStorage.removeItem("token");
+            sessionStorage.removeItem("token");
             window.location.href = "/login.html";
           }
-        } else {
-          window.location.href = "/login.html";
+        });
+
+        async function fetchFamilies() {
+          try {
+            console.log("Fetching families");
+            const response = await fetch("http://localhost:8100/my-families", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: token,
+              },
+            });
+            const data = await response.json();
+            console.log("Fetch families response:", data);
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to fetch families");
+            }
+
+            const familyList = document.getElementById("family-list");
+            familyList.innerHTML = "";
+
+            if (data.families.length === 0) {
+              familyList.innerHTML = `<ion-item><ion-label>No families found</ion-label></ion-item>`;
+            } else {
+              data.families.forEach(family => {
+                const item = document.createElement("ion-item");
+                item.innerHTML = `
+                  <ion-label>
+                    <h2>${family.name}</h2>
+                    <p>ID: ${family.id} | Role: ${family.role || 'Owner'}</p>
+                  </ion-label>
+                `;
+                familyList.appendChild(item);
+              });
+            }
+          } catch (error) {
+            console.error("Error fetching families:", error);
+            const toast = document.createElement("ion-toast");
+            toast.message = "Failed to load families: " + error.message;
+            toast.duration = 2000;
+            toast.color = "danger";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+          }
         }
+
+        fetchFamilies();
+
+        document.getElementById("create_family_form").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = event.target;
+          const formData = new FormData(form);
+          const name = formData.get("name");
+          console.log("Creating family:", { name });
+
+          try {
+            const response = await fetch("http://localhost:8100/family", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: token,
+              },
+              body: JSON.stringify({ name }),
+            });
+            const data = await response.json();
+            console.log("Create family response:", data);
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to create family");
+            }
+            const toast = document.createElement("ion-toast");
+            toast.message = `Family Created (ID: ${data.family_id})`;
+            toast.duration = 2000;
+            toast.color = "success";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+            form.reset();
+            fetchFamilies();
+            setTimeout(() => {
+              console.log("Redirecting to /calendar.html");
+              window.location.href = "/calendar.html";
+            }, 2000);
+          } catch (error) {
+            console.error("Error creating family:", error);
+            const toast = document.createElement("ion-toast");
+            toast.message = "Failed to create family: " + error.message;
+            toast.duration = 2000;
+            toast.color = "danger";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+          }
+        });
+
+        document.getElementById("join_family_form").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = event.target;
+          const formData = new FormData(form);
+          const family_id = formData.get("family_id");
+          console.log("Joining family with ID:", family_id);
+
+          try {
+            const response = await fetch("http://localhost:8100/family/join", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: token,
+              },
+              body: JSON.stringify({ family_id }),
+            });
+            const data = await response.json();
+            console.log("Join family response:", data);
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to join family");
+            }
+            const toast = document.createElement("ion-toast");
+            toast.message = "Joined Family";
+            toast.duration = 2000;
+            toast.color = "success";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+            form.reset();
+            fetchFamilies();
+            setTimeout(() => {
+              console.log("Redirecting to /calendar.html");
+              window.location.href = "/calendar.html";
+            }, 2000);
+          } catch (error) {
+            console.error("Error joining family:", error);
+            const toast = document.createElement("ion-toast");
+            toast.message = "Failed to join family: " + error.message;
+            toast.duration = 2000;
+            toast.color = "danger";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+          }
+        });
       });
     </script>
   </body>

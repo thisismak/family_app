@@ -20,8 +20,8 @@
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item href="/login.html"><ion-icon name="log-in-outline"></ion-icon>Login</ion-item>
-            <ion-item href="/register.html"><ion-icon name="person-add-outline"></ion-icon>Register</ion-item>
+            <ion-item id="nav-login"><ion-icon name="log-in-outline"></ion-icon>Login</ion-item>
+            <ion-item id="nav-register"><ion-icon name="person-add-outline"></ion-icon>Register</ion-item>
           </ion-list>
         </ion-content>
       </ion-menu>
@@ -122,111 +122,130 @@
     </ion-app>
 
     <script>
-      // Check for existing token in localStorage or sessionStorage and redirect
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
-      if (token) {
-        console.log("Token found:", token, "Redirecting to /calendar.html");
-        window.location.href = "/calendar.html";
-      } else {
-        console.log("No token found, staying on login page");
-      }
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("DOM loaded for login.html");
+        console.log("Ionic version:", window.Ionic?.version || "Not loaded");
 
-      const loginForm = document.getElementById("login_form");
-      const usernameInput = document.getElementById("username");
-      const passwordInput = document.getElementById("password");
-      const togglePassword = document.getElementById("togglePassword");
-      const loginButton = document.getElementById("login_button");
-      const usernameError = document.getElementById("username_error");
-      const passwordError = document.getElementById("password_error");
-
-      // Input validation
-      usernameInput.addEventListener("input", () => {
-        if (usernameInput.value.length < 3 || usernameInput.value.length > 32) {
-          usernameError.hidden = false;
-        } else {
-          usernameError.hidden = true;
-        }
-      });
-
-      passwordInput.addEventListener("input", () => {
-        if (passwordInput.value.length < 6) {
-          passwordError.hidden = false;
-        } else {
-          passwordError.hidden = true;
-        }
-      });
-
-      // Toggle password visibility
-      togglePassword.addEventListener("click", () => {
-        const type = passwordInput.type === "password" ? "text" : "password";
-        passwordInput.type = type;
-        togglePassword.name = type === "password" ? "eye-outline" : "eye-off-outline";
-      });
-
-      // Form submission
-      loginForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-        const username = formData.get("username");
-        const password = formData.get("password");
-        const remember = formData.get("remember") === "on";
-
-        console.log("Login attempt:", { username, remember });
-
-        loginButton.disabled = true;
-        loginButton.querySelector("ion-spinner").hidden = false;
-
-        try {
-          const response = await fetch("http://localhost:8100/login", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ username, password }),
+        // Menu navigation
+        const navItems = {
+          "nav-login": "/login.html",
+          "nav-register": "/register.html",
+        };
+        Object.keys(navItems).forEach((id) => {
+          const item = document.getElementById(id);
+          item.addEventListener("click", () => {
+            const url = navItems[id];
+            console.log(`Navigating to ${url}`);
+            window.location.href = url;
           });
+        });
 
-          const data = await response.json();
-          console.log("Login response:", data);
-
-          if (!response.ok) {
-            throw new Error(data.error || "Login failed");
-          }
-
-          // Store token based on "Remember Me"
-          if (remember) {
-            localStorage.setItem("token", data.token);
-            sessionStorage.removeItem("token"); // Clear sessionStorage
-            console.log("Token stored in localStorage:", data.token);
-          } else {
-            sessionStorage.setItem("token", data.token);
-            localStorage.removeItem("token"); // Clear localStorage
-            console.log("Token stored in sessionStorage:", data.token);
-          }
-
-          // Show success toast
-          const toast = document.createElement("ion-toast");
-          toast.message = "Login Successful";
-          toast.duration = 2000;
-          toast.color = "success";
-          document.body.appendChild(toast);
-          await toast.present();
-
-          // Redirect immediately
-          console.log("Redirecting to /calendar.html");
+        // Check for existing token
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        if (token) {
+          console.log("Token found:", token, "Redirecting to /calendar.html");
           window.location.href = "/calendar.html";
-        } catch (error) {
-          console.error("Login error:", error.message);
-          const toast = document.createElement("ion-toast");
-          toast.message = error.message || "An error occurred";
-          toast.duration = 2000;
-          toast.color = "danger";
-          document.body.appendChild(toast);
-          await toast.present();
-        } finally {
-          loginButton.disabled = false;
-          loginButton.querySelector("ion-spinner").hidden = true;
+          return;
         }
+        console.log("No token found, staying on login page");
+
+        const loginForm = document.getElementById("login_form");
+        const usernameInput = document.getElementById("username");
+        const passwordInput = document.getElementById("password");
+        const togglePassword = document.getElementById("togglePassword");
+        const loginButton = document.getElementById("login_button");
+        const usernameError = document.getElementById("username_error");
+        const passwordError = document.getElementById("password_error");
+
+        // Input validation
+        usernameInput.addEventListener("input", () => {
+          if (usernameInput.value.length < 3 || usernameInput.value.length > 32) {
+            usernameError.hidden = false;
+          } else {
+            usernameError.hidden = true;
+          }
+        });
+
+        passwordInput.addEventListener("input", () => {
+          if (passwordInput.value.length < 6) {
+            passwordError.hidden = false;
+          } else {
+            passwordError.hidden = true;
+          }
+        });
+
+        // Toggle password visibility
+        togglePassword.addEventListener("click", () => {
+          const type = passwordInput.type === "password" ? "text" : "password";
+          passwordInput.type = type;
+          togglePassword.name = type === "password" ? "eye-outline" : "eye-off-outline";
+        });
+
+        // Form submission
+        loginForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = event.target;
+          const formData = new FormData(form);
+          const username = formData.get("username");
+          const password = formData.get("password");
+          const remember = formData.get("remember") === "on";
+
+          console.log("Login attempt:", { username, remember });
+
+          loginButton.disabled = true;
+          loginButton.querySelector("ion-spinner").hidden = false;
+
+          try {
+            const response = await fetch("http://localhost:8100/login", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ username, password }),
+            });
+
+            const data = await response.json();
+            console.log("Login response:", data);
+
+            if (!response.ok) {
+              throw new Error(data.error || "Login failed");
+            }
+
+            // Store token based on "Remember Me"
+            if (remember) {
+              localStorage.setItem("token", data.token);
+              sessionStorage.removeItem("token");
+              console.log("Token stored in localStorage:", data.token);
+            } else {
+              sessionStorage.setItem("token", data.token);
+              localStorage.removeItem("token");
+              console.log("Token stored in sessionStorage:", data.token);
+            }
+
+            // Show success toast
+            const toast = document.createElement("ion-toast");
+            toast.message = "Login Successful";
+            toast.duration = 2000;
+            toast.color = "success";
+            document.body.appendChild(toast);
+            await toast.present();
+
+            // Redirect immediately
+            console.log("Redirecting to /calendar.html");
+            window.location.href = "/calendar.html";
+          } catch (error) {
+            console.error("Login error:", error.message);
+            const toast = document.createElement("ion-toast");
+            toast.message = error.message || "An error occurred";
+            toast.duration = 2000;
+            toast.color = "danger";
+            document.body.appendChild(toast);
+            await toast.present();
+          } finally {
+            loginButton.disabled = false;
+            loginButton.querySelector("ion-spinner").hidden = true;
+          }
+        });
       });
     </script>
   </body>

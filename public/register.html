@@ -20,8 +20,8 @@
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item href="/login.html"><ion-icon name="log-in-outline"></ion-icon>Login</ion-item>
-            <ion-item href="/register.html"><ion-icon name="person-add-outline"></ion-icon>Register</ion-item>
+            <ion-item id="nav-login"><ion-icon name="log-in-outline"></ion-icon>Login</ion-item>
+            <ion-item id="nav-register"><ion-icon name="person-add-outline"></ion-icon>Register</ion-item>
           </ion-list>
         </ion-content>
       </ion-menu>
@@ -118,59 +118,86 @@
     </ion-app>
 
     <script>
-      const token = localStorage.getItem("token") || "";
-      if (token) {
-        window.location.href = "/calendar.html";
-      }
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("DOM loaded for register.html");
+        console.log("Ionic version:", window.Ionic?.version || "Not loaded");
 
-      const registerForm = document.getElementById("register_form");
-      const passwordInput = document.getElementById("password");
-      const togglePassword = document.getElementById("togglePassword");
-
-      togglePassword.addEventListener("click", () => {
-        const type = passwordInput.type === "password" ? "text" : "password";
-        passwordInput.type = type;
-        togglePassword.name = type === "password" ? "eye-outline" : "eye-off-outline";
-      });
-
-      registerForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-        const username = formData.get("username");
-        const email = formData.get("email");
-        const password = formData.get("password");
-
-        try {
-          const response = await fetch("/register", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ username, email, password }),
+        // Menu navigation
+        const navItems = {
+          "nav-login": "/login.html",
+          "nav-register": "/register.html",
+        };
+        Object.keys(navItems).forEach((id) => {
+          const item = document.getElementById(id);
+          item.addEventListener("click", () => {
+            const url = navItems[id];
+            console.log(`Navigating to ${url}`);
+            window.location.href = url;
           });
+        });
 
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || "Registration failed");
-          }
-
-          const toast = document.createElement("ion-toast");
-          toast.message = "Registration Successful";
-          toast.duration = 2000;
-          toast.color = "success";
-          document.body.appendChild(toast);
-          toast.present().then(() => {
-            setTimeout(() => (window.location.href = "/login.html"), 2000);
-          });
-        } catch (error) {
-          const toast = document.createElement("ion-toast");
-          toast.message = error.message;
-          toast.duration = 2000;
-          toast.color = "danger";
-          document.body.appendChild(toast);
-          toast.present();
+        // Check for existing token
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        if (token) {
+          console.log("Token found:", token, "Redirecting to /calendar.html");
+          window.location.href = "/calendar.html";
+          return;
         }
+
+        const registerForm = document.getElementById("register_form");
+        const passwordInput = document.getElementById("password");
+        const togglePassword = document.getElementById("togglePassword");
+
+        togglePassword.addEventListener("click", () => {
+          const type = passwordInput.type === "password" ? "text" : "password";
+          passwordInput.type = type;
+          togglePassword.name = type === "password" ? "eye-outline" : "eye-off-outline";
+        });
+
+        registerForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = event.target;
+          const formData = new FormData(form);
+          const username = formData.get("username");
+          const email = formData.get("email");
+          const password = formData.get("password");
+
+          try {
+            const response = await fetch("http://localhost:8100/register", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ username, email, password }),
+            });
+
+            const data = await response.json();
+            console.log("Register response:", data);
+            if (!response.ok) {
+              throw new Error(data.error || "Registration failed");
+            }
+
+            const toast = document.createElement("ion-toast");
+            toast.message = "Registration Successful";
+            toast.duration = 2000;
+            toast.color = "success";
+            document.body.appendChild(toast);
+            toast.present().then(() => {
+              setTimeout(() => {
+                console.log("Redirecting to /login.html");
+                window.location.href = "/login.html";
+              }, 2000);
+            }).catch((err) => console.error("Toast present error:", err));
+          } catch (error) {
+            console.error("Register error:", error);
+            const toast = document.createElement("ion-toast");
+            toast.message = "Failed to register: " + error.message;
+            toast.duration = 2000;
+            toast.color = "danger";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+          }
+        });
       });
     </script>
   </body>

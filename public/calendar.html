@@ -47,11 +47,11 @@
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item href="/index.html"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
-            <ion-item href="/calendar.html"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
-            <ion-item href="/tasks.html"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
-            <ion-item href="/chat.html"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
-            <ion-item href="/family.html"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
+            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
+            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
+            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
+            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
+            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
             <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>Sign Out</ion-item>
           </ion-list>
         </ion-content>
@@ -150,19 +150,39 @@
 
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <script>
-      // Check for existing token in localStorage or sessionStorage
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
-      if (!token) {
-        console.log("No token found, redirecting to /login.html");
-        window.location.href = "/login.html";
-      } else {
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("DOM loaded");
+        console.log("Ionic version:", window.Ionic?.version || "Not loaded");
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        if (!token) {
+          console.log("No token found, redirecting to /login.html");
+          window.location.href = "/login.html";
+          return;
+        }
         console.log("Token found:", token);
-      }
 
-      document.getElementById("signOut").addEventListener("click", async () => {
-        if (token) {
+        // Menu navigation
+        const navItems = {
+          "nav-dashboard": "/index.html",
+          "nav-calendar": "/calendar.html",
+          "nav-tasks": "/tasks.html",
+          "nav-chat": "/chat.html",
+          "nav-family": "/family.html",
+        };
+        Object.keys(navItems).forEach((id) => {
+          const item = document.getElementById(id);
+          item.addEventListener("click", () => {
+            const url = navItems[id];
+            console.log(`Navigating to ${url}`);
+            window.location.href = url;
+          });
+        });
+
+        // Sign out
+        document.getElementById("signOut").addEventListener("click", async () => {
+          console.log("Sign out clicked");
           try {
-            await fetch(`/logout?token=${encodeURIComponent(token)}`, {
+            await fetch(`http://localhost:8100/logout?token=${encodeURIComponent(token)}`, {
               method: "GET",
             });
             localStorage.removeItem("token");
@@ -175,12 +195,8 @@
             sessionStorage.removeItem("token");
             window.location.href = "/login.html";
           }
-        } else {
-          window.location.href = "/login.html";
-        }
-      });
+        });
 
-      document.addEventListener("DOMContentLoaded", function () {
         const calendarEl = document.getElementById("calendar");
         if (!calendarEl) {
           console.error("Calendar element not found");
@@ -206,7 +222,8 @@
           },
           events: async (fetchInfo, successCallback, failureCallback) => {
             try {
-              const response = await fetch("/calendar", {
+              console.log("Fetching events");
+              const response = await fetch("http://localhost:8100/calendar", {
                 method: "GET",
                 headers: {
                   "Content-Type": "application/json",
@@ -214,8 +231,10 @@
                 },
               });
               const data = await response.json();
+              console.log("Fetch events response:", data);
               if (!response.ok) {
                 if (data.error === "User not in a family") {
+                  console.log("User not in a family, showing toast");
                   const toast = document.createElement("ion-toast");
                   toast.message = "Please create or join a family first";
                   toast.duration = 3000;
@@ -224,12 +243,13 @@
                     {
                       text: "Go to Family",
                       handler: () => {
+                        console.log("Toast button clicked, redirecting to /family.html");
                         window.location.href = "/family.html";
                       },
                     },
                   ];
                   document.body.appendChild(toast);
-                  toast.present();
+                  toast.present().catch((err) => console.error("Toast present error:", err));
                 }
                 throw new Error(data.error || "Failed to fetch events");
               }
@@ -249,6 +269,7 @@
                   };
                 })
                 .filter((event) => event !== null);
+              console.log("Events loaded:", events);
               successCallback(events);
             } catch (error) {
               console.error("Error fetching events:", error);
@@ -258,25 +279,29 @@
               toast.duration = 3000;
               toast.color = "danger";
               document.body.appendChild(toast);
-              toast.present();
+              toast.present().catch((err) => console.error("Toast present error:", err));
             }
           },
           eventClick: (info) => {
             const start = new Date(info.event.start).toLocaleString();
             const end = info.event.end ? new Date(info.event.end).toLocaleString() : "N/A";
+            console.log("Event clicked:", info.event.title);
             alert(`Event: ${info.event.title}\nStart: ${start}\nEnd: ${end}`);
           },
           datesSet: () => {
+            console.log("Calendar dates set, updating size");
             calendar.updateSize();
           },
         });
 
         setTimeout(() => {
+          console.log("Rendering calendar");
           calendar.render();
           calendar.updateSize();
         }, 100);
 
         window.addEventListener("resize", () => {
+          console.log("Window resized, updating calendar size");
           calendar.updateSize();
         });
 
@@ -288,14 +313,16 @@
           let start_datetime = formData.get("start_datetime");
           let end_datetime = formData.get("end_datetime");
           let reminder_datetime = formData.get("reminder_datetime");
+          console.log("Event form submitted:", { title, start_datetime, end_datetime, reminder_datetime });
 
           if (!title || !start_datetime) {
+            console.log("Missing title or start date");
             const toast = document.createElement("ion-toast");
             toast.message = "Title and start date are required";
             toast.duration = 2000;
             toast.color = "danger";
             document.body.appendChild(toast);
-            toast.present();
+            toast.present().catch((err) => console.error("Toast present error:", err));
             return;
           }
 
@@ -308,17 +335,19 @@
               throw new Error("Invalid start date");
             }
           } catch (error) {
+            console.error("Invalid date format:", error);
             const toast = document.createElement("ion-toast");
             toast.message = "Invalid date format";
             toast.duration = 2000;
             toast.color = "danger";
             document.body.appendChild(toast);
-            toast.present();
+            toast.present().catch((err) => console.error("Toast present error:", err));
             return;
           }
 
           try {
-            const response = await fetch("/calendar", {
+            console.log("Sending event creation request");
+            const response = await fetch("http://localhost:8100/calendar", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -332,8 +361,10 @@
               }),
             });
             const data = await response.json();
+            console.log("Event creation response:", data);
             if (!response.ok) {
               if (data.error === "User not in a family") {
+                console.log("User not in a family, showing toast");
                 const toast = document.createElement("ion-toast");
                 toast.message = "Please create or join a family first";
                 toast.duration = 3000;
@@ -342,18 +373,21 @@
                   {
                     text: "Go to Family",
                     handler: () => {
+                      console.log("Toast button clicked, redirecting to /family.html");
                       window.location.href = "/family.html";
                     },
                   },
                 ];
                 document.body.appendChild(toast);
-                toast.present();
+                toast.present().catch((err) => console.error("Toast present error:", err));
               } else {
                 throw new Error(data.error || "Failed to create event");
               }
             } else {
+              console.log("Event created, refetching events");
               calendar.refetchEvents();
               setTimeout(() => {
+                console.log("Re-rendering calendar");
                 calendar.render();
                 calendar.updateSize();
               }, 100);
@@ -362,7 +396,7 @@
               toast.duration = 2000;
               toast.color = "success";
               document.body.appendChild(toast);
-              toast.present();
+              toast.present().catch((err) => console.error("Toast present error:", err));
               form.reset();
             }
           } catch (error) {
@@ -372,7 +406,7 @@
             toast.duration = 2000;
             toast.color = "danger";
             document.body.appendChild(toast);
-            toast.present();
+            toast.present().catch((err) => console.error("Toast present error:", err));
           }
         });
       });

@@ -20,11 +20,11 @@
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item href="/index.html"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
-            <ion-item href="/calendar.html"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
-            <ion-item href="/tasks.html"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
-            <ion-item href="/chat.html"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
-            <ion-item href="/family.html"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
+            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
+            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
+            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
+            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
+            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
             <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>Sign Out</ion-item>
           </ion-list>
         </ion-content>
@@ -52,25 +52,25 @@
               <ion-grid>
                 <ion-row>
                   <ion-col size="12" size-md="6">
-                    <ion-button expand="block" href="/calendar.html">
+                    <ion-button expand="block" id="btn-calendar">
                       <ion-icon name="calendar-outline" slot="start"></ion-icon>
                       View Calendar
                     </ion-button>
                   </ion-col>
                   <ion-col size="12" size-md="6">
-                    <ion-button expand="block" href="/tasks.html">
+                    <ion-button expand="block" id="btn-tasks">
                       <ion-icon name="checkbox-outline" slot="start"></ion-icon>
                       Manage Tasks
                     </ion-button>
                   </ion-col>
                   <ion-col size="12" size-md="6">
-                    <ion-button expand="block" href="/chat.html">
+                    <ion-button expand="block" id="btn-chat">
                       <ion-icon name="chatbubble-outline" slot="start"></ion-icon>
                       Family Chat
                     </ion-button>
                   </ion-col>
                   <ion-col size="12" size-md="6">
-                    <ion-button expand="block" href="/family.html">
+                    <ion-button expand="block" id="btn-family">
                       <ion-icon name="people-outline" slot="start"></ion-icon>
                       Manage Family
                     </ion-button>
@@ -84,9 +84,9 @@
               <ion-icon name="add-outline"></ion-icon>
             </ion-fab-button>
             <ion-fab-list side="top">
-              <ion-fab-button href="/calendar.html" color="light"><ion-icon name="calendar-outline"></ion-icon></ion-fab-button>
-              <ion-fab-button href="/tasks.html" color="light"><ion-icon name="checkbox-outline"></ion-icon></ion-fab-button>
-              <ion-fab-button href="/chat.html" color="light"><ion-icon name="chatbubble-outline"></ion-icon></ion-fab-button>
+              <ion-fab-button id="fab-calendar" color="light"><ion-icon name="calendar-outline"></ion-icon></ion-fab-button>
+              <ion-fab-button id="fab-tasks" color="light"><ion-icon name="checkbox-outline"></ion-icon></ion-fab-button>
+              <ion-fab-button id="fab-chat" color="light"><ion-icon name="chatbubble-outline"></ion-icon></ion-fab-button>
             </ion-fab-list>
           </ion-fab>
         </ion-content>
@@ -101,67 +101,112 @@
     </ion-app>
 
     <script>
-      // Existing JavaScript code remains unchanged
-      const token = localStorage.getItem("token") || "";
-      if (!token) {
-        window.location.href = "/login.html";
-      }
-
-      const signOut = document.getElementById("signOut");
-      const welcomeUsername = document.getElementById("welcomeUsername");
-
-      async function fetchUser() {
-        try {
-          const response = await fetch("/user", {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: token,
-            },
-          });
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || "Failed to fetch user data");
-          }
-          return {
-            username: data.username || "Guest",
-            email: data.email || "No email",
-          };
-        } catch (err) {
-          console.error("Error fetching user:", err);
-          localStorage.removeItem("token");
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("DOM loaded for index.html");
+        console.log("Ionic version:", window.Ionic?.version || "Not loaded");
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        if (!token) {
+          console.log("No token found, redirecting to /login.html");
           window.location.href = "/login.html";
-          return { username: "Guest", email: "Not logged in" };
+          return;
         }
-      }
+        console.log("Token found:", token);
 
-      async function updateWelcomeMessage() {
-        try {
-          const user = await fetchUser();
-          welcomeUsername.textContent = user.username;
-        } catch (err) {
-          welcomeUsername.textContent = "Guest";
-        }
-      }
+        // Menu navigation
+        const navItems = {
+          "nav-dashboard": "/index.html",
+          "nav-calendar": "/calendar.html",
+          "nav-tasks": "/tasks.html",
+          "nav-chat": "/chat.html",
+          "nav-family": "/family.html",
+        };
+        Object.keys(navItems).forEach((id) => {
+          const item = document.getElementById(id);
+          item.addEventListener("click", () => {
+            const url = navItems[id];
+            console.log(`Navigating to ${url}`);
+            window.location.href = url;
+          });
+        });
 
-      updateWelcomeMessage();
+        // Button navigation
+        const buttonNav = {
+          "btn-calendar": "/calendar.html",
+          "btn-tasks": "/tasks.html",
+          "btn-chat": "/chat.html",
+          "btn-family": "/family.html",
+          "fab-calendar": "/calendar.html",
+          "fab-tasks": "/tasks.html",
+          "fab-chat": "/chat.html",
+        };
+        Object.keys(buttonNav).forEach((id) => {
+          const button = document.getElementById(id);
+          button.addEventListener("click", () => {
+            const url = buttonNav[id];
+            console.log(`Button clicked, navigating to ${url}`);
+            window.location.href = url;
+          });
+        });
 
-      signOut.addEventListener("click", async () => {
-        if (token) {
+        // Sign out
+        document.getElementById("signOut").addEventListener("click", async () => {
+          console.log("Sign out clicked");
           try {
-            await fetch(`/logout?token=${encodeURIComponent(token)}`, {
+            await fetch(`http://localhost:8100/logout?token=${encodeURIComponent(token)}`, {
               method: "GET",
             });
             localStorage.removeItem("token");
+            sessionStorage.removeItem("token");
+            console.log("Logged out, cleared token");
             window.location.href = "/login.html";
           } catch (err) {
             console.error("Error during sign out:", err);
             localStorage.removeItem("token");
+            sessionStorage.removeItem("token");
             window.location.href = "/login.html";
           }
-        } else {
-          window.location.href = "/login.html";
+        });
+
+        // Fetch user
+        async function fetchUser() {
+          try {
+            console.log("Fetching user info");
+            const response = await fetch("http://localhost:8100/user", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: token,
+              },
+            });
+            const data = await response.json();
+            console.log("Fetch user response:", data);
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to fetch user data");
+            }
+            return {
+              username: data.username || "Guest",
+              email: data.email || "No email",
+            };
+          } catch (err) {
+            console.error("Error fetching user:", err);
+            localStorage.removeItem("token");
+            sessionStorage.removeItem("token");
+            window.location.href = "/login.html";
+            return { username: "Guest", email: "Not logged in" };
+          }
         }
+
+        // Update welcome message
+        async function updateWelcomeMessage() {
+          try {
+            const user = await fetchUser();
+            document.getElementById("welcomeUsername").textContent = user.username;
+          } catch (err) {
+            document.getElementById("welcomeUsername").textContent = "Guest";
+          }
+        }
+
+        updateWelcomeMessage();
       });
     </script>
   </body>
