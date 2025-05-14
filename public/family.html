@@ -15,6 +15,16 @@
         height: 40px;
         margin-right: 8px;
       }
+      .member-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .member-item {
+        display: flex;
+        align-items: center;
+      }
     </style>
   </head>
   <body>
@@ -136,7 +146,7 @@
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        console.log("DOM loaded");
+        console.log("DOM loaded for family.html");
         console.log("Ionic version:", window.Ionic?.version || "Not loaded");
         const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
         if (!token) {
@@ -204,16 +214,51 @@
             if (data.families.length === 0) {
               familyList.innerHTML = `<ion-item><ion-label>No families found</ion-label></ion-item>`;
             } else {
-              data.families.forEach(family => {
+              for (const family of data.families) {
+                // Fetch members for each family
+                let members = [];
+                try {
+                  console.log(`Fetching members for family ID: ${family.id}`);
+                  const memberResponse = await fetch(`http://localhost:8100/family/members?family_id=${family.id}`, {
+                    method: "GET",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: token,
+                    },
+                  });
+                  const memberData = await memberResponse.json();
+                  console.log(`Fetch members response for family ${family.id}:`, memberData);
+                  if (!memberResponse.ok) {
+                    throw new Error(memberData.error || "Failed to fetch members");
+                  }
+                  members = memberData.members || [];
+                } catch (error) {
+                  console.error(`Error fetching members for family ${family.id}:`, error);
+                  members = [];
+                }
+
                 const item = document.createElement("ion-item");
                 item.innerHTML = `
                   <ion-label>
                     <h2>${family.name}</h2>
                     <p>ID: ${family.id} | Role: ${family.role || 'Owner'}</p>
+                    <p>Members: </p>
+                    <div class="member-list">
+                      ${members.length > 0
+                        ? members.map(member => `
+                            <div class="member-item">
+                              <ion-avatar>
+                                <img src="/assets/user-${member.user_id}.png" alt="${member.username}" onerror="this.src='/assets/user-default.png'" />
+                              </ion-avatar>
+                              <span>${member.username}</span>
+                            </div>
+                          `).join('')
+                        : '<span>No members found</span>'}
+                    </div>
                   </ion-label>
                 `;
                 familyList.appendChild(item);
-              });
+              }
             }
           } catch (error) {
             console.error("Error fetching families:", error);
