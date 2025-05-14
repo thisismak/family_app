@@ -3,6 +3,7 @@ import { print } from 'listening-on';
 import { randomUUID } from 'node:crypto';
 import sqlite3 from 'sqlite3';
 import bcrypt from 'bcrypt';
+import cors from 'cors';
 
 // Interfaces
 interface User {
@@ -32,6 +33,7 @@ const db = new sqlite3.Database('db.sqlite3', (err) => {
 const server: Application = express();
 
 // Middleware
+server.use(cors()); // Enable CORS for cross-origin requests
 server.use(express.static('public'));
 server.use(express.urlencoded({ extended: true }));
 server.use(express.json({ limit: '10mb' }));
@@ -122,10 +124,12 @@ const loginHandler: RequestHandler = (req: Request, res: Response): void => {
   console.log('Login attempt:', { username });
 
   if (!username) {
+    console.log('Missing username');
     res.status(400).json({ error: 'Username is required' });
     return;
   }
   if (!password) {
+    console.log('Missing password');
     res.status(400).json({ error: 'Password is required' });
     return;
   }
@@ -137,13 +141,16 @@ const loginHandler: RequestHandler = (req: Request, res: Response): void => {
       return;
     }
     if (!user) {
+      console.log('User not found:', username);
       res.status(401).json({ error: 'Invalid username' });
       return;
     }
 
     try {
+      console.log('Comparing passwords for:', username);
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
+        console.log('Invalid password for:', username);
         res.status(401).json({ error: 'Invalid password' });
         return;
       }
