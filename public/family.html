@@ -83,6 +83,20 @@
           </ion-toolbar>
         </ion-header>
         <ion-content class="ion-padding">
+          <!-- 新增：顯示用戶的家庭 -->
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>My Families</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <ion-list id="family-list">
+                <ion-item>
+                  <ion-label>No families found</ion-label>
+                </ion-item>
+              </ion-list>
+            </ion-card-content>
+          </ion-card>
+          <!-- 創建家庭 -->
           <ion-card>
             <ion-card-header>
               <ion-card-title>Create Family</ion-card-title>
@@ -108,6 +122,7 @@
               </form>
             </ion-card-content>
           </ion-card>
+          <!-- 加入家庭 -->
           <ion-card>
             <ion-card-header>
               <ion-card-title>Join Family</ion-card-title>
@@ -152,15 +167,52 @@
 
       const signOut = document.getElementById("signOut");
 
-      signOut.addEventListener("click", () => {
-        if (token) {
-          localStorage.removeItem("token");
-          window.location.href = `/logout?token=${encodeURIComponent(token)}`;
-        } else {
-          window.location.href = "/login.html";
-        }
-      });
+      // 新增：獲取並顯示用戶的家庭
+      async function fetchFamilies() {
+        try {
+          const response = await fetch("/my-families", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token,
+            },
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to fetch families");
+          }
 
+          const familyList = document.getElementById("family-list");
+          familyList.innerHTML = ""; // 清空列表
+
+          if (data.families.length === 0) {
+            familyList.innerHTML = `<ion-item><ion-label>No families found</ion-label></ion-item>`;
+          } else {
+            data.families.forEach(family => {
+              const item = document.createElement("ion-item");
+              item.innerHTML = `
+                <ion-label>
+                  <h2>${family.name}</h2>
+                  <p>ID: ${family.id} | Role: ${family.role || 'Owner'}</p>
+                </ion-label>
+              `;
+              familyList.appendChild(item);
+            });
+          }
+        } catch (error) {
+          const toast = document.createElement("ion-toast");
+          toast.message = error.message;
+          toast.duration = 2000;
+          toast.color = "danger";
+          document.body.appendChild(toast);
+          toast.present();
+        }
+      }
+
+      // 頁面加載時獲取家庭
+      fetchFamilies();
+
+      // 創建家庭
       document
         .getElementById("create_family_form")
         .addEventListener("submit", async (event) => {
@@ -189,6 +241,7 @@
             document.body.appendChild(toast);
             toast.present();
             form.reset();
+            fetchFamilies(); // 創建後刷新家庭列表
           } catch (error) {
             const toast = document.createElement("ion-toast");
             toast.message = error.message;
@@ -199,6 +252,7 @@
           }
         });
 
+      // 加入家庭
       document
         .getElementById("join_family_form")
         .addEventListener("submit", async (event) => {
@@ -224,9 +278,10 @@
             toast.message = "Joined Family";
             toast.duration = 2000;
             toast.color = "success";
-            document.body.appendChild(toast);
+            document.body.appendChild(toTe);
             toast.present();
             form.reset();
+            fetchFamilies(); // 加入後刷新家庭列表
           } catch (error) {
             const toast = document.createElement("ion-toast");
             toast.message = error.message;
@@ -236,6 +291,25 @@
             toast.present();
           }
         });
+
+      // 登出
+      signOut.addEventListener("click", async () => {
+        if (token) {
+          try {
+            await fetch(`/logout?token=${encodeURIComponent(token)}`, {
+              method: "GET",
+            });
+            localStorage.removeItem("token");
+            window.location.href = "/login.html";
+          } catch (err) {
+            console.error("Error during sign out:", err);
+            localStorage.removeItem("token");
+            window.location.href = "/login.html";
+          }
+        } else {
+          window.location.href = "/login.html";
+        }
+      });
     </script>
   </body>
 </html>

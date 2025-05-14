@@ -350,6 +350,29 @@ const joinFamilyHandler: RequestHandler = (req: Request, res: Response): void =>
 
 server.post('/family/join', authenticate, joinFamilyHandler);
 
+// Handle retrieving user's families
+const myFamiliesHandler: RequestHandler = (req: Request, res: Response): void => {
+  const user_id = (req as any).user_id;
+
+  db.all(
+    `SELECT f.id, f.name, f.owner_id, fm.role 
+     FROM family f 
+     LEFT JOIN family_member fm ON f.id = fm.family_id 
+     WHERE f.owner_id = ? OR fm.user_id = ?`,
+    [user_id, user_id],
+    (err, families: any[]) => {
+      if (err) {
+        console.error('Database error in my-families:', err.message, err.stack);
+        res.status(500).json({ error: 'Server error' });
+        return;
+      }
+      res.status(200).json({ families });
+    }
+  );
+};
+
+server.get('/my-families', authenticate, myFamiliesHandler);
+
 // Handle calendar events (GET)
 const calendarHandler: RequestHandler = (req: Request, res: Response): void => {
   const user_id = (req as any).user_id;

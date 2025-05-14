@@ -145,6 +145,7 @@
     </ion-app>
 
     <script>
+      // Check for token and redirect to login if not present
       const token = localStorage.getItem("token") || "";
       if (!token) {
         window.location.href = "/login.html";
@@ -172,6 +173,8 @@
           };
         } catch (err) {
           console.error("Error fetching user:", err);
+          localStorage.removeItem("token");
+          window.location.href = "/login.html";
           return { username: "Guest", email: "Not logged in" };
         }
       }
@@ -187,10 +190,19 @@
 
       updateWelcomeMessage();
 
-      signOut.addEventListener("click", () => {
+      signOut.addEventListener("click", async () => {
         if (token) {
-          localStorage.removeItem("token");
-          window.location.href = `/logout?token=${encodeURIComponent(token)}`;
+          try {
+            await fetch(`/logout?token=${encodeURIComponent(token)}`, {
+              method: "GET",
+            });
+            localStorage.removeItem("token");
+            window.location.href = "/login.html";
+          } catch (err) {
+            console.error("Error during sign out:", err);
+            localStorage.removeItem("token");
+            window.location.href = "/login.html";
+          }
         } else {
           window.location.href = "/login.html";
         }
