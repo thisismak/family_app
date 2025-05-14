@@ -4,26 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>S&S Family App - Calendar</title>
-    <script
-      type="module"
-      src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.esm.js"
-    ></script>
-    <script
-      nomodule
-      src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.js"
-    ></script>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/css/ionic.bundle.min.css"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css"
-      rel="stylesheet"
-    />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/css/ionic.bundle.min.css" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
     <style>
-      ion-content {
-        --background: var(--ion-color-light);
-      }
       #calendar {
         max-width: 900px;
         margin: 20px auto;
@@ -31,49 +18,22 @@
         min-height: 400px;
         width: 100%;
         box-sizing: border-box;
+        background: var(--text-light);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
       }
-      .fc-scrollgrid-sync-table, .fc-daygrid-body {
-        width: 100% !important; /* Override zero-width issues */
-        min-width: 300px; /* Ensure minimum width */
+      .fc-button {
+        background: var(--primary-pink) !important;
+        color: var(--text-dark) !important;
+        border-radius: 8px !important;
       }
-      .fc-scroller {
-        overflow: auto !important; /* Ensure proper scrolling */
+      .fc-button:hover {
+        background: var(--dark-pink) !important;
+        color: var(--text-light) !important;
       }
-      ion-card {
-        margin: 16px;
-        max-width: 500px;
-        margin-left: auto;
-        margin-right: auto;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      }
-      ion-button {
-        --border-radius: 8px;
-      }
-      ion-toolbar {
-        --background: #ff9800;
-        --color: #ffffff;
-      }
-      ion-menu {
-        --background: #ffffff;
-        --color: #000000;
-      }
-      ion-menu ion-item {
-        --background: #ffffff;
-        --color: #000000;
-        --background-activated: #ff9800;
-        --color-activated: #ffffff;
-      }
-      ion-menu-button {
-        --color: #ffffff;
-      }
-      @media (max-width: 768px) {
-        ion-menu ion-item {
-          font-size: 14px;
-        }
-        #calendar {
-          margin: 10px;
-          min-height: 300px;
-        }
+      .fc-event {
+        border-radius: 6px;
+        border: 2px solid var(--dark-pink);
       }
     </style>
   </head>
@@ -81,18 +41,18 @@
     <ion-app>
       <ion-menu content-id="main-content" side="start">
         <ion-header>
-          <ion-toolbar style="--background: #ff9800; --color: #ffffff">
+          <ion-toolbar>
             <ion-title>Menu</ion-title>
           </ion-toolbar>
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item href="/index.html">Dashboard</ion-item>
-            <ion-item href="/calendar.html">Calendar</ion-item>
-            <ion-item href="/tasks.html">Tasks</ion-item>
-            <ion-item href="/chat.html">Chat</ion-item>
-            <ion-item href="/family.html">Family</ion-item>
-            <ion-item id="signOut">Sign Out</ion-item>
+            <ion-item href="/index.html"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
+            <ion-item href="/calendar.html"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
+            <ion-item href="/tasks.html"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
+            <ion-item href="/chat.html"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
+            <ion-item href="/family.html"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
+            <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>Sign Out</ion-item>
           </ion-list>
         </ion-content>
       </ion-menu>
@@ -102,64 +62,84 @@
             <ion-buttons slot="start">
               <ion-menu-button></ion-menu-button>
             </ion-buttons>
-            <ion-title>S&S Family App - Calendar</ion-title>
+            <ion-title>S&S Family App</ion-title>
           </ion-toolbar>
         </ion-header>
-        <ion-content class="ion-padding" scroll-y="true">
+        <ion-content class="ion-padding">
+          <img src="/assets/family-logo.png" alt="Family Logo" class="family-logo" />
+          <div class="welcome-message">
+            <h2>Family Calendar</h2>
+            <p>Plan and share family events with love.</p>
+          </div>
           <ion-card>
             <ion-card-header>
               <ion-card-title>Add Event</ion-card-title>
             </ion-card-header>
             <ion-card-content>
               <form id="event_form" class="ion-padding">
-                <ion-item>
-                  <ion-input
-                    type="text"
-                    name="title"
-                    id="title"
-                    label="Event Title"
-                    placeholder="Enter event title"
-                    required
-                  ></ion-input>
-                </ion-item>
-                <ion-item>
-                  <ion-label position="stacked">Start Date & Time</ion-label>
-                  <ion-datetime
-                    name="start_datetime"
-                    id="start_datetime"
-                    display-format="YYYY-MM-DD HH:mm"
-                    required
-                  ></ion-datetime>
-                </ion-item>
-                <ion-item>
-                  <ion-label position="stacked">End Date & Time (Optional)</ion-label>
-                  <ion-datetime
-                    name="end_datetime"
-                    id="end_datetime"
-                    display-format="YYYY-MM-DD HH:mm"
-                  ></ion-datetime>
-                </ion-item>
-                <ion-item>
-                  <ion-label position="stacked">Reminder (Optional)</ion-label>
-                  <ion-datetime
-                    name="reminder_datetime"
-                    id="reminder_datetime"
-                    display-format="YYYY-MM-DD HH:mm"
-                  ></ion-datetime>
-                </ion-item>
-                <ion-button
-                  expand="block"
-                  type="submit"
-                  style="--background: #ff9800; --color: #ffffff"
-                  class="ion-margin-top"
-                >Add Event</ion-button>
+                <ion-grid>
+                  <ion-row>
+                    <ion-col>
+                      <ion-item>
+                        <ion-input
+                          type="text"
+                          name="title"
+                          id="title"
+                          label="Event Title"
+                          placeholder="Enter event title"
+                          required
+                        ></ion-input>
+                      </ion-item>
+                    </ion-col>
+                  </ion-row>
+                  <ion-row>
+                    <ion-col size="12" size-md="6">
+                      <ion-item>
+                        <ion-label position="stacked">Start Date & Time</ion-label>
+                        <ion-datetime
+                          name="start_datetime"
+                          id="start_datetime"
+                          display-format="YYYY-MM-DD HH:mm"
+                          required
+                        ></ion-datetime>
+                      </ion-item>
+                    </ion-col>
+                    <ion-col size="12" size-md="6">
+                      <ion-item>
+                        <ion-label position="stacked">End Date & Time (Optional)</ion-label>
+                        <ion-datetime
+                          name="end_datetime"
+                          id="end_datetime"
+                          display-format="YYYY-MM-DD HH:mm"
+                        ></ion-datetime>
+                      </ion-item>
+                    </ion-col>
+                  </ion-row>
+                  <ion-row>
+                    <ion-col>
+                      <ion-item>
+                        <ion-label position="stacked">Reminder (Optional)</ion-label>
+                        <ion-datetime
+                          name="reminder_datetime"
+                          id="reminder_datetime"
+                          display-format="YYYY-MM-DD HH:mm"
+                        ></ion-datetime>
+                      </ion-item>
+                    </ion-col>
+                  </ion-row>
+                  <ion-row>
+                    <ion-col>
+                      <ion-button expand="block" type="submit">Add Event</ion-button>
+                    </ion-col>
+                  </ion-row>
+                </ion-grid>
               </form>
             </ion-card-content>
           </ion-card>
           <div id="calendar"></div>
         </ion-content>
         <ion-footer>
-          <ion-toolbar style="--background: #232428; --color: #ffffff">
+          <ion-toolbar>
             <ion-title size="small" class="ion-text-center">
               © 2025 S&S Family App. All rights reserved.
             </ion-title>
@@ -170,6 +150,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <script>
+      // Existing JavaScript remains unchanged
       const token = localStorage.getItem("token") || "";
       if (!token) {
         window.location.href = "/login.html";
@@ -200,17 +181,9 @@
           return;
         }
 
-        // Set initial date to the start of the current month
-        const today = new Date();
-        const initialDate = new Date(today.getFullYear(), today.getMonth(), 1);
-
         const calendar = new FullCalendar.Calendar(calendarEl, {
           initialView: "dayGridMonth",
-          initialDate: initialDate.toISOString(),
-          validRange: {
-            start: "2025-05-01",
-            end: "2025-06-01"
-          },
+          initialDate: new Date().toISOString().split('T')[0],
           headerToolbar: {
             left: "prev,next today",
             center: "title",
@@ -223,7 +196,7 @@
             hour: "2-digit",
             minute: "2-digit",
             hour12: true,
-            meridiem: "short" // Displays "AM"/"PM"
+            meridiem: "short"
           },
           events: async (fetchInfo, successCallback, failureCallback) => {
             try {
@@ -235,7 +208,6 @@
                 },
               });
               const data = await response.json();
-              console.log("Server response:", data); // Debug server data
               if (!response.ok) {
                 if (data.error === "User not in a family") {
                   const toast = document.createElement("ion-toast");
@@ -271,7 +243,6 @@
                   };
                 })
                 .filter((event) => event !== null);
-              console.log("Mapped events:", events); // Debug mapped events
               successCallback(events);
             } catch (error) {
               console.error("Error fetching events:", error);
@@ -294,7 +265,6 @@
           },
         });
 
-        // Delay initial render to ensure DOM is ready
         setTimeout(() => {
           calendar.render();
           calendar.updateSize();

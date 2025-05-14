@@ -4,53 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>S&S Family App - Family Management</title>
-    <script
-      type="module"
-      src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.esm.js"
-    ></script>
-    <script
-      nomodule
-      src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.js"
-    ></script>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/css/ionic.bundle.min.css"
-    />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/css/ionic.bundle.min.css" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
     <style>
-      ion-content {
-        --background: var(--ion-color-light);
-      }
-      ion-card {
-        margin: 16px;
-        max-width: 500px;
-        margin-left: auto;
-        margin-right: auto;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      }
-      ion-button {
-        --border-radius: 8px;
-      }
-      ion-toolbar {
-        --background: #ff9800;
-        --color: #ffffff;
-      }
-      ion-menu {
-        --background: #ffffff;
-        --color: #000000;
-      }
-      ion-menu ion-item {
-        --background: #ffffff;
-        --color: #000000;
-        --background-activated: #ff9800;
-        --color-activated: #ffffff;
-      }
-      ion-menu-button {
-        --color: #ffffff;
-      }
-      @media (max-width: 768px) {
-        ion-menu ion-item {
-          font-size: 14px;
-        }
+      ion-avatar {
+        width: 40px;
+        height: 40px;
+        margin-right: 8px;
       }
     </style>
   </head>
@@ -58,18 +21,18 @@
     <ion-app>
       <ion-menu content-id="main-content" side="start">
         <ion-header>
-          <ion-toolbar style="--background: #ff9800; --color: #ffffff">
+          <ion-toolbar>
             <ion-title>Menu</ion-title>
           </ion-toolbar>
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item href="/index.html">Dashboard</ion-item>
-            <ion-item href="/calendar.html">Calendar</ion-item>
-            <ion-item href="/tasks.html">Tasks</ion-item>
-            <ion-item href="/chat.html">Chat</ion-item>
-            <ion-item href="/family.html">Family</ion-item>
-            <ion-item id="signOut">Sign Out</ion-item>
+            <ion-item href="/index.html"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
+            <ion-item href="/calendar.html"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
+            <ion-item href="/tasks.html"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
+            <ion-item href="/chat.html"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
+            <ion-item href="/family.html"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
+            <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>Sign Out</ion-item>
           </ion-list>
         </ion-content>
       </ion-menu>
@@ -79,11 +42,15 @@
             <ion-buttons slot="start">
               <ion-menu-button></ion-menu-button>
             </ion-buttons>
-            <ion-title>S&S Family App - Family Management</ion-title>
+            <ion-title>S&S Family App</ion-title>
           </ion-toolbar>
         </ion-header>
         <ion-content class="ion-padding">
-          <!-- 新增：顯示用戶的家庭 -->
+          <img src="/assets/family-logo.png" alt="Family Logo" class="family-logo" />
+          <div class="welcome-message">
+            <h2>Manage Your Family</h2>
+            <p>Build your family circle with love.</p>
+          </div>
           <ion-card>
             <ion-card-header>
               <ion-card-title>My Families</ion-card-title>
@@ -96,61 +63,69 @@
               </ion-list>
             </ion-card-content>
           </ion-card>
-          <!-- 創建家庭 -->
           <ion-card>
             <ion-card-header>
               <ion-card-title>Create Family</ion-card-title>
             </ion-card-header>
             <ion-card-content>
               <form id="create_family_form" class="ion-padding">
-                <ion-item>
-                  <ion-label position="stacked">Family Name</ion-label>
-                  <ion-input
-                    type="text"
-                    name="name"
-                    id="family_name"
-                    placeholder="Enter family name"
-                    required
-                  ></ion-input>
-                </ion-item>
-                <ion-button
-                  expand="block"
-                  type="submit"
-                  style="--background: #ff9800; --color: #ffffff"
-                  class="ion-margin-top"
-                >Create Family</ion-button>
+                <ion-grid>
+                  <ion-row>
+                    <ion-col>
+                      <ion-item>
+                        <ion-label position="stacked">Family Name</ion-label>
+                        <ion-input
+                          type="text"
+                          name="name"
+                          id="family_name"
+                          placeholder="Enter family name"
+                          required
+                        ></ion-input>
+                      </ion-item>
+                    </ion-col>
+                  </ion-row>
+                  <ion-row>
+                    <ion-col>
+                      <ion-button expand="block" type="submit">Create Family</ion-button>
+                    </ion-col>
+                  </ion-row>
+                </ion-grid>
               </form>
             </ion-card-content>
           </ion-card>
-          <!-- 加入家庭 -->
           <ion-card>
             <ion-card-header>
               <ion-card-title>Join Family</ion-card-title>
             </ion-card-header>
             <ion-card-content>
               <form id="join_family_form" class="ion-padding">
-                <ion-item>
-                  <ion-label position="stacked">Family ID</ion-label>
-                  <ion-input
-                    type="number"
-                    name="family_id"
-                    id="family_id"
-                    placeholder="Enter family ID"
-                    required
-                  ></ion-input>
-                </ion-item>
-                <ion-button
-                  expand="block"
-                  type="submit"
-                  style="--background: #ff9800; --color: #ffffff"
-                  class="ion-margin-top"
-                >Join Family</ion-button>
+                <ion-grid>
+                  <ion-row>
+                    <ion-col>
+                      <ion-item>
+                        <ion-label position="stacked">Family ID</ion-label>
+                        <ion-input
+                          type="number"
+                          name="family_id"
+                          id="family_id"
+                          placeholder="Enter family ID"
+                          required
+                        ></ion-input>
+                      </ion-item>
+                    </ion-col>
+                  </ion-row>
+                  <ion-row>
+                    <ion-col>
+                      <ion-button expand="block" type="submit">Join Family</ion-button>
+                    </ion-col>
+                  </ion-row>
+                </ion-grid>
               </form>
             </ion-card-content>
           </ion-card>
         </ion-content>
         <ion-footer>
-          <ion-toolbar style="--background: #232428; --color: #ffffff">
+          <ion-toolbar>
             <ion-title size="small" class="ion-text-center">
               © 2025 S&S Family App. All rights reserved.
             </ion-title>
@@ -167,7 +142,6 @@
 
       const signOut = document.getElementById("signOut");
 
-      // 新增：獲取並顯示用戶的家庭
       async function fetchFamilies() {
         try {
           const response = await fetch("/my-families", {
@@ -183,7 +157,7 @@
           }
 
           const familyList = document.getElementById("family-list");
-          familyList.innerHTML = ""; // 清空列表
+          familyList.innerHTML = "";
 
           if (data.families.length === 0) {
             familyList.innerHTML = `<ion-item><ion-label>No families found</ion-label></ion-item>`;
@@ -191,6 +165,9 @@
             data.families.forEach(family => {
               const item = document.createElement("ion-item");
               item.innerHTML = `
+                <ion-avatar slot="start">
+                  <img src="/assets/family-${family.id}.png" alt="${family.name}" />
+                </ion-avatar>
                 <ion-label>
                   <h2>${family.name}</h2>
                   <p>ID: ${family.id} | Role: ${family.role || 'Owner'}</p>
@@ -209,90 +186,82 @@
         }
       }
 
-      // 頁面加載時獲取家庭
       fetchFamilies();
 
-      // 創建家庭
-      document
-        .getElementById("create_family_form")
-        .addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const form = event.target;
-          const formData = new FormData(form);
-          const name = formData.get("name");
+      document.getElementById("create_family_form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const name = formData.get("name");
 
-          try {
-            const response = await fetch("/family", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-              body: JSON.stringify({ name }),
-            });
-            const data = await response.json();
-            if (!response.ok) {
-              throw new Error(data.error || "Failed to create family");
-            }
-            const toast = document.createElement("ion-toast");
-            toast.message = `Family Created (ID: ${data.family_id})`;
-            toast.duration = 2000;
-            toast.color = "success";
-            document.body.appendChild(toast);
-            toast.present();
-            form.reset();
-            fetchFamilies(); // 創建後刷新家庭列表
-          } catch (error) {
-            const toast = document.createElement("ion-toast");
-            toast.message = error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present();
+        try {
+          const response = await fetch("/family", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token,
+            },
+            body: JSON.stringify({ name }),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to create family");
           }
-        });
+          const toast = document.createElement("ion-toast");
+          toast.message = `Family Created (ID: ${data.family_id})`;
+          toast.duration = 2000;
+          toast.color = "success";
+          document.body.appendChild(toast);
+          toast.present();
+          form.reset();
+          fetchFamilies();
+        } catch (error) {
+          const toast = document.createElement("ion-toast");
+          toast.message = error.message;
+          toast.duration = 2000;
+          toast.color = "danger";
+          document.body.appendChild(toast);
+          toast.present();
+        }
+      });
 
-      // 加入家庭
-      document
-        .getElementById("join_family_form")
-        .addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const form = event.target;
-          const formData = new FormData(form);
-          const family_id = formData.get("family_id");
+      document.getElementById("join_family_form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const family_id = formData.get("family_id");
 
-          try {
-            const response = await fetch("/family/join", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-              body: JSON.stringify({ family_id }),
-            });
-            const data = await response.json();
-            if (!response.ok) {
-              throw new Error(data.error || "Failed to join family");
-            }
-            const toast = document.createElement("ion-toast");
-            toast.message = "Joined Family";
-            toast.duration = 2000;
-            toast.color = "success";
-            document.body.appendChild(toTe);
-            toast.present();
-            form.reset();
-            fetchFamilies(); // 加入後刷新家庭列表
-          } catch (error) {
-            const toast = document.createElement("ion-toast");
-            toast.message = error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present();
+        try {
+          const response = await fetch("/family/join", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token,
+            },
+            body: JSON.stringify({ family_id }),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to join family");
           }
-        });
+          const toast = document.createElement("ion-toast");
+          toast.message = "Joined Family";
+          toast.duration = 2000;
+          toast.color = "success";
+          document.body.appendChild(toast);
+          toast.present();
+          form.reset();
+          fetchFamilies();
+        } catch (error) {
+          const toast = document.createElement("ion-toast");
+          toast.message = error.message;
+          toast.duration = 2000;
+          toast.color = "danger";
+          document.body.appendChild(toast);
+          toast.present();
+        }
+      });
 
-      // 登出
       signOut.addEventListener("click", async () => {
         if (token) {
           try {
