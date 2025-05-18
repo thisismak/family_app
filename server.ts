@@ -380,6 +380,53 @@ const myFamiliesHandler: RequestHandler = (req: Request, res: Response): void =>
 
 server.get('/my-families', authenticate, myFamiliesHandler);
 
+// Handle retrieving family members
+const familyMembersHandler: RequestHandler = (req: Request, res: Response): void => {
+  const user_id = (req as any).user_id;
+  const family_id = req.query.family_id as string;
+
+  if (!family_id) {
+    res.status(400).json({ error: 'Family ID is required' });
+    return;
+  }
+
+  // Verify user is a member of the family
+  db.get(
+    'SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?',
+    [family_id, user_id],
+    (err, row: { user_id: number } | undefined) => {
+      if (err) {
+        console.error('Database error in family members:', err.message, err.stack);
+        res.status(500).json({ error: 'Server error' });
+        return;
+      }
+      if (!row) {
+        res.status(403).json({ error: 'User is not a member of this family' });
+        return;
+      }
+
+      // Retrieve usernames of family members
+      db.all(
+        `SELECT u.id AS user_id, u.username
+         FROM family_member fm
+         JOIN user u ON fm.user_id = u.id
+         WHERE fm.family_id = ?`,
+        [family_id],
+        (err, members: { user_id: number; username: string }[]) => {
+          if (err) {
+            console.error('Database error in family members:', err.message, err.stack);
+            res.status(500).json({ error: 'Server error' });
+            return;
+          }
+          res.status(200).json({ members });
+        }
+      );
+    }
+  );
+};
+
+server.get('/family/members', authenticate, familyMembersHandler);
+
 // Handle calendar events (GET)
 const calendarHandler: RequestHandler = (req: Request, res: Response): void => {
   const user_id = (req as any).user_id;

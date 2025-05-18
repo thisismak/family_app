@@ -15,16 +15,6 @@
         height: 40px;
         margin-right: 8px;
       }
-      .member-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-      }
-      .member-item {
-        display: flex;
-        align-items: center;
-      }
     </style>
   </head>
   <body>
@@ -242,19 +232,7 @@
                   <ion-label>
                     <h2>${family.name}</h2>
                     <p>ID: ${family.id} | Role: ${family.role || 'Owner'}</p>
-                    <p>Members: </p>
-                    <div class="member-list">
-                      ${members.length > 0
-                        ? members.map(member => `
-                            <div class="member-item">
-                              <ion-avatar>
-                                <img src="/assets/user-${member.user_id}.png" alt="${member.username}" onerror="this.src='/assets/user-default.png'" />
-                              </ion-avatar>
-                              <span>${member.username}</span>
-                            </div>
-                          `).join('')
-                        : '<span>No members found</span>'}
-                    </div>
+                    <p>Members: ${members.length > 0 ? members.map(m => m.username).join(', ') : 'No members found'}</p>
                   </ion-label>
                 `;
                 familyList.appendChild(item);
