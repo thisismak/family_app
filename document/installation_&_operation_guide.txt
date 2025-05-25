@@ -10,3 +10,8 @@ npm run db:update
 
 4. Runs server.ts
 npx ts-node server.ts
+
+
+Export all code
+Ctrl+Shift+P -> Dir2file: Select Files to Export -> Enter
+PS: installed "Export Directory to File"
