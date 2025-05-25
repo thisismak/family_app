@@ -328,11 +328,41 @@
           event.preventDefault();
           const form = event.target;
           const formData = new FormData(form);
-          const title = formData.get("title");
-          const description = formData.get("description");
+          const title = formData.get("title")?.toString().trim();
+          const description = formData.get("description")?.toString().trim() || null;
           const assignee_id = formData.get("assignee_id") || null;
-          const due_date = formData.get("due_date");
-          const priority = formData.get("priority");
+          const due_date = formData.get("due_date")?.toString();
+          const priority = formData.get("priority")?.toString() || "medium";
+
+          // Client-side validation
+          if (!title) {
+            const toast = document.createElement("ion-toast");
+            toast.message = "Task title is required";
+            toast.duration = 2000;
+            toast.color = "danger";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+            return;
+          }
+          if (title.length > 100) {
+            const toast = document.createElement("ion-toast");
+            toast.message = "Task title must be 100 characters or less";
+            toast.duration = 2000;
+            toast.color = "danger";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+            return;
+          }
+          if (!["low", "medium", "high"].includes(priority)) {
+            const toast = document.createElement("ion-toast");
+            toast.message = "Invalid priority value";
+            toast.duration = 2000;
+            toast.color = "danger";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+            return;
+          }
+
           console.log("Task form submitted:", { title, description, assignee_id, due_date, priority });
 
           try {
@@ -346,8 +376,8 @@
               body: JSON.stringify({
                 title,
                 description,
-                assignee_id,
-                due_date: due_date ? new Date(due_date).toISOString() : null,
+                assignee_id: assignee_id ? Number(assignee_id) : null,
+                due_date: due_date ? new Date(due_date).toISOString().split("T")[0] : null,
                 priority,
               }),
             });
@@ -371,24 +401,22 @@
                 ];
                 document.body.appendChild(toast);
                 toast.present().catch((err) => console.error("Toast present error:", err));
-              } else {
-                throw new Error(data.error || "Failed to create task");
               }
-            } else {
-              console.log("Task created, refetching tasks");
-              renderTasks();
-              const toast = document.createElement("ion-toast");
-              toast.message = "Task Created";
-              toast.duration = 2000;
-              toast.color = "success";
-              document.body.appendChild(toast);
-              toast.present().catch((err) => console.error("Toast present error:", err));
-              form.reset();
+              throw new Error(data.error || "Failed to create task");
             }
+            console.log("Task created, refetching tasks");
+            renderTasks();
+            const toast = document.createElement("ion-toast");
+            toast.message = "Task Created";
+            toast.duration = 2000;
+            toast.color = "success";
+            document.body.appendChild(toast);
+            toast.present().catch((err) => console.error("Toast present error:", err));
+            form.reset();
           } catch (error) {
             console.error("Error creating task:", error);
             const toast = document.createElement("ion-toast");
-            toast.message = "Failed to create task: " + error.message;
+            toast.message = `Failed to create task: ${error.message || "Unknown server error"}`;
             toast.duration = 2000;
             toast.color = "danger";
             document.body.appendChild(toast);

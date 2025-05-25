@@ -33,7 +33,7 @@ const db = new sqlite3.Database('db.sqlite3', (err) => {
 const server: Application = express();
 
 // Middleware
-server.use(cors()); // Enable CORS for cross-origin requests
+server.use(cors());
 server.use(express.static('public'));
 server.use(express.urlencoded({ extended: true }));
 server.use(express.json({ limit: '10mb' }));
@@ -190,7 +190,7 @@ server.get('/logout', logoutHandler);
 // Get user info
 const userHandler: RequestHandler = (req: Request, res: Response): void => {
   const user_id = (req as any).user_id;
-  db.get('SELECT username, email FROM user WHERE id = ?', [user_id], (err, user: User | undefined) => {
+  db.get('SELECT username, email, avatar FROM user WHERE id = ?', [user_id], (err, user: User | undefined) => {
     if (err) {
       console.error('Database error in user:', err.message, err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -200,7 +200,7 @@ const userHandler: RequestHandler = (req: Request, res: Response): void => {
       res.status(404).json({ error: 'User not found' });
       return;
     }
-    res.status(200).json({ username: user.username, email: user.email });
+    res.status(200).json({ user_id: user.id, username: user.username, email: user.email, avatar: user.avatar });
   });
 };
 
@@ -550,22 +550,18 @@ server.get('/tasks', authenticate, tasksHandler);
 // Handle tasks (POST)
 const createTaskHandler: RequestHandler = (req: Request, res: Response): void => {
   const user_id = (req as any).user_id;
-  const { title, description, assignee_id, due_date, priority, status } = req.body;
+  const { title, description, assignee_id, due_date, priority } = req.body;
 
   if (!title) {
     res.status(400).json({ error: 'Title is required' });
     return;
   }
-  if (title.length > 100) {
-    res.status(400).json({ error: 'Title must be 100 characters or less' });
+  if (title.length > 255) {
+    res.status(400).json({ error: 'Title must be 255 characters or less' });
     return;
   }
   if (priority && !['low', 'medium', 'high'].includes(priority)) {
-    res.status(400).json({ error: 'Invalid priority' });
-    return;
-  }
-  if (status && !['pending', 'completed'].includes(status)) {
-    res.status(400).json({ error: 'Invalid status' });
+    res.status(400).json({ error: 'Priority must be low, medium, or high' });
     return;
   }
 
@@ -574,7 +570,7 @@ const createTaskHandler: RequestHandler = (req: Request, res: Response): void =>
     [user_id],
     (err, row: { family_id: number } | undefined) => {
       if (err) {
-        console.error('Database error in create task:', err.message, err.stack);
+        console.error('Database error checking family membership:', err.message, err.stack);
         res.status(500).json({ error: 'Server error' });
         return;
       }
@@ -583,39 +579,41 @@ const createTaskHandler: RequestHandler = (req: Request, res: Response): void =>
         return;
       }
 
+      const family_id = row.family_id;
+
       if (assignee_id) {
         db.get(
           'SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?',
-          [row.family_id, assignee_id],
+          [family_id, assignee_id],
           (err, assignee: { user_id: number } | undefined) => {
             if (err) {
-              console.error('Database error in assignee check:', err.message, err.stack);
+              console.error('Database error checking assignee:', err.message, err.stack);
               res.status(500).json({ error: 'Server error' });
               return;
             }
             if (!assignee) {
-              res.status(400).json({ error: 'Assignee not in family' });
+              res.status(400).json({ error: 'Assignee is not a member of this family' });
               return;
             }
-            insertTask(row.family_id);
+            insertTask(family_id);
           }
         );
       } else {
-        insertTask(row.family_id);
+        insertTask(family_id);
       }
 
       function insertTask(family_id: number) {
-        const created_at = new Date().toISOString();
         db.run(
-          'INSERT INTO task (family_id, creator_id, assignee_id, title, description, due_date, priority, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [family_id, user_id, assignee_id || null, title, description || null, due_date || null, priority || 'medium', status || 'pending', created_at],
+          'INSERT INTO task (family_id, creator_id, assignee_id, title, description, due_date, priority, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [family_id, user_id, assignee_id || null, title, description || null, due_date || null, priority || 'medium', 'pending'],
           function (err) {
             if (err) {
-              console.error('Insert task error:', err.message, err.stack);
-              res.status(500).json({ error: 'Server error' });
+              console.error('Insert task error:', err.message, { title, description, assignee_id, due_date, priority, family_id });
+              res.status(500).json({ error: `Failed to create task: ${err.message}` });
               return;
             }
-            res.status(200).json({ message: 'Task created', task_id: this.lastID });
+            console.log('Task created:', { task_id: this.lastID, title, family_id });
+            res.status(201).json({ message: 'Task created', task_id: this.lastID });
           }
         );
       }
