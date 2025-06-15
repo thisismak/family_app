@@ -1,101 +1,125 @@
-import express, { Request, Response, Application, NextFunction } from 'express';
+import express, { Request, Response, Application } from 'express';
 import { print } from 'listening-on';
-import { randomUUID } from 'node:crypto';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
 import bcrypt from 'bcrypt';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import { AppDataSource } from './ormconfig';
-import { User } from './src/entities/User';
-import { Session } from './src/entities/Session';
-import { Family } from './src/entities/Family';
-import { FamilyMember } from './src/entities/FamilyMember';
-import { Event } from './src/entities/Event';
-import { Task } from './src/entities/Task';
-import { Message } from './src/entities/Message';
-import { Not } from 'typeorm';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import jwt from 'jsonwebtoken';
 
-// Load environment variables
-dotenv.config();
-
-// Initialize Express app
-const server: Application = express();
+const app: Application = express();
+const PORT = 8100;
+const JWT_SECRET = 'your_jwt_secret_key'; // Replace with a secure key in production
 
 // Middleware
-server.use(cors());
-server.use(express.static('public'));
-server.use(express.urlencoded({ extended: true }));
-server.use(express.json({ limit: '10mb' }));
+app.use(cors());
+app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
 
-// Configure multer for file uploads
-const uploadDir = path.join(__dirname, '../public/assets/avatars');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Initialize SQLite database
+async function initDb() {
+  const db = await open({
+    filename: './database.db',
+    driver: sqlite3.Database
+  });
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS user (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL CHECK(length(username) <= 32),
+      password TEXT NOT NULL,
+      avatar TEXT,
+      email TEXT UNIQUE
+    );
+
+    CREATE TABLE IF NOT EXISTS family (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL CHECK(length(name) <= 100),
+      owner_id INTEGER NOT NULL,
+      FOREIGN KEY (owner_id) REFERENCES user(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS family_member (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      family_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member' CHECK(length(role) <= 20),
+      FOREIGN KEY (family_id) REFERENCES family(id),
+      FOREIGN KEY (user_id) REFERENCES user(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS event (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      family_id INTEGER NOT NULL,
+      creator_id INTEGER NOT NULL,
+      title TEXT NOT NULL CHECK(length(title) <= 100),
+      start_datetime TEXT NOT NULL,
+      end_datetime TEXT,
+      reminder_datetime TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (family_id) REFERENCES family(id),
+      FOREIGN KEY (creator_id) REFERENCES user(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS task (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      family_id INTEGER NOT NULL,
+      creator_id INTEGER NOT NULL,
+      assignee_id INTEGER,
+      title TEXT NOT NULL CHECK(length(title) <= 100),
+      description TEXT,
+      due_date TEXT,
+      priority TEXT NOT NULL DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed')),
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (family_id) REFERENCES family(id),
+      FOREIGN KEY (creator_id) REFERENCES user(id),
+      FOREIGN KEY (assignee_id) REFERENCES user(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS message (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      family_id INTEGER NOT NULL,
+      sender_id INTEGER NOT NULL,
+      content TEXT NOT NULL CHECK(length(content) <= 1000),
+      sent_at TEXT NOT NULL,
+      FOREIGN KEY (family_id) REFERENCES family(id),
+      FOREIGN KEY (sender_id) REFERENCES user(id)
+    );
+  `);
+
+  return db;
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${randomUUID()}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only images are allowed'));
-    }
-    cb(null, true);
-  },
-});
-
-// Initialize TypeORM
-AppDataSource.initialize()
-  .then(() => console.log('TypeORM connected to SQLite database'))
-  .catch((err) => console.error('TypeORM initialization error:', err));
-
-// Root route to serve index.html
-server.get('/', (req: Request, res: Response) => {
-  res.sendFile('index.html', { root: 'public' });
-});
-
 // Authentication middleware
-const authenticate = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.replace('Bearer ', '') || (req.query.token as string) || '';
+const authenticate = async (req: Request, res: Response, next: Function) => {
+  const token = req.headers.authorization?.split(' ')[1] || req.query.token as string;
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
+
   try {
-    const session = await AppDataSource.getRepository(Session).findOneBy({ token });
-    if (!session) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    if (session.expires < Date.now()) {
-      await AppDataSource.getRepository(Session).delete({ token });
-      return res.status(401).json({ error: 'Session expired' });
-    }
-    (req as any).user_id = session.user_id;
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    (req as any).user_id = decoded.userId;
     next();
-  } catch (err) {
-    console.error(`Authentication error [token=${token}]:`, err);
-    res.status(500).json({ error: 'Server error' });
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
   }
 };
 
-// Handle user registration
-const registerHandler = async (req: Request, res: Response) => {
+// Root route
+app.get('/', (req: Request, res: Response) => {
+  res.sendFile('index.html', { root: 'public' });
+});
+
+// Register
+app.post('/register', async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
   console.log('Registration attempt:', { username });
 
-  if (!username) return res.status(400).json({ error: 'Username is required' });
-  if (!password) return res.status(400).json({ error: 'Password is required' });
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
   if (username.length < 3 || username.length > 32) {
     return res.status(400).json({ error: 'Username must be between 3 and 32 characters' });
   }
@@ -104,109 +128,82 @@ const registerHandler = async (req: Request, res: Response) => {
   }
 
   try {
-    const userRepository = AppDataSource.getRepository(User);
-    const existingUser = await userRepository.findOneBy({ username });
+    const db = await initDb();
+    const existingUser = await db.get('SELECT id FROM user WHERE username = ?', [username]);
     if (existingUser) {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User();
-    user.username = username;
-    user.password = hashedPassword;
-    user.email = email || null;
-    user.avatar = null;
-    await userRepository.save(user);
-
-    console.log('Registration successful:', { id: user.id, username });
+    await db.run(
+      'INSERT INTO user (username, password, avatar, email) VALUES (?, ?, NULL, ?)',
+      [username, hashedPassword, email || null]
+    );
+    console.log('Registration successful:', { username });
     res.status(201).json({ message: 'Registration successful' });
-  } catch (err) {
-    console.error(`Registration error [username=${username}]:`, err);
-    res.status(500).json({ error: 'Server error' });
+  } catch (error: any) {
+    console.error('Register error:', error);
+    if (error.code === 'SQLITE_CONSTRAINT') {
+      res.status(400).json({ error: 'Username or email already exists' });
+    } else {
+      res.status(500).json({ error: 'Server error' });
+    }
   }
-};
+});
 
-server.post('/register', registerHandler);
-
-// Handle user login
-const loginHandler = async (req: Request, res: Response) => {
+// Login
+app.post('/login', async (req: Request, res: Response) => {
   const { username, password } = req.body;
   console.log('Login attempt:', { username });
 
-  if (!username) return res.status(400).json({ error: 'Username is required' });
-  if (!password) return res.status(400).json({ error: 'Password is required' });
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
 
   try {
-    const userRepository = AppDataSource.getRepository(User);
-    const user = await userRepository.findOneBy({ username });
+    const db = await initDb();
+    const user = await db.get('SELECT id, username, password FROM user WHERE username = ?', [username]);
     if (!user) {
-      console.log('User not found:', username);
       return res.status(401).json({ error: 'Invalid username' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log('Invalid password for:', username);
       return res.status(401).json({ error: 'Invalid password' });
     }
 
-    const sessionRepository = AppDataSource.getRepository(Session);
-    const token = randomUUID();
-    const session = new Session();
-    session.token = token;
-    session.user_id = user.id;
-    session.expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
-    await sessionRepository.save(session);
-
-    console.log('Login successful:', { user_id: user.id, token });
-    res.status(200).json({ token });
-  } catch (err) {
-    console.error(`Login error [username=${username}]:`, err);
+    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
+    console.log('Login successful:', { user_id: user.id });
+    res.status(200).json({ token, message: 'Login successful' });
+  } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.post('/login', loginHandler);
-
-// Handle user logout
-const logoutHandler = async (req: Request, res: Response) => {
-  const token = req.headers.authorization?.replace('Bearer ', '') || req.body.token || '';
-  if (!token) {
-    return res.status(400).json({ error: 'No token provided' });
-  }
-  try {
-    await AppDataSource.getRepository(Session).delete({ token });
-    res.status(200).json({ message: 'Logged out successfully' });
-  } catch (err) {
-    console.error(`Logout error [token=${token}]:`, err);
-    res.status(500).json({ error: 'Server error' });
-  }
-};
-
-server.post('/logout', logoutHandler);
+// Logout
+app.get('/logout', async (req: Request, res: Response) => {
+  res.redirect('/'); // Client handles token removal
+});
 
 // Get user info
-const userHandler = async (req: Request, res: Response) => {
+app.get('/user', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
   try {
-    const user = await AppDataSource.getRepository(User).findOne({
-      where: { id: user_id },
-      select: ['id', 'username', 'email', 'avatar'],
-    });
+    const db = await initDb();
+    const user = await db.get('SELECT id, username, email, avatar FROM user WHERE id = ?', [user_id]);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
     res.status(200).json({ user_id: user.id, username: user.username, email: user.email, avatar: user.avatar });
-  } catch (err) {
-    console.error(`User info error [user_id=${user_id}]:`, err);
+  } catch (error) {
+    console.error('User fetch error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
-
-server.get('/user', authenticate, userHandler);
+});
 
 // Update user email
-const updateEmailHandler = async (req: Request, res: Response) => {
+app.patch('/user/email', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
   const { email } = req.body;
 
@@ -215,382 +212,288 @@ const updateEmailHandler = async (req: Request, res: Response) => {
   }
 
   try {
-    const userRepository = AppDataSource.getRepository(User);
-    const existingEmail = await userRepository.findOneBy({ email, id: Not(user_id) });
+    const db = await initDb();
+    const existingEmail = await db.get('SELECT id FROM user WHERE email = ? AND id != ?', [email, user_id]);
     if (existingEmail) {
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    await userRepository.update({ id: user_id }, { email: email || null });
-    console.log('Email updated:', { user_id, email: email || null });
+    await db.run('UPDATE user SET email = ? WHERE id = ?', [email || null, user_id]);
+    console.log('Email updated:', { user_id, email });
     res.status(200).json({ message: 'Email updated successfully' });
-  } catch (err) {
-    console.error(`Update email error [user_id=${user_id}]:`, err);
+  } catch (error) {
+    console.error('Update email error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.patch('/user/email', authenticate, updateEmailHandler);
-
-// Handle avatar upload
-const uploadAvatarHandler = async (req: Request, res: Response) => {
-  const user_id = (req as any).user_id;
-
-  try {
-    await new Promise((resolve, reject) => {
-      upload.single('avatar')(req, res, (err) => {
-        if (err) return reject(err);
-        resolve(null);
-      });
-    });
-
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    const avatarPath = `/assets/avatars/${req.file.filename}`;
-    await AppDataSource.getRepository(User).update({ id: user_id }, { avatar: avatarPath });
-
-    res.status(200).json({ message: 'Avatar uploaded', avatar: avatarPath });
-  } catch (err) {
-    console.error(`Upload avatar error [user_id=${user_id}]:`, err);
-    res.status(500).json({ error: err.message || 'Server error' });
-  }
-};
-
-server.post('/user/avatar', authenticate, uploadAvatarHandler);
-
-// Handle family creation
-const createFamilyHandler = async (req: Request, res: Response) => {
+// Create family
+app.post('/family', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
   const { name } = req.body;
 
-  if (!name) return res.status(400).json({ error: 'Family name is required' });
-  if (name.length > 100) return res.status(400).json({ error: 'Family name must be 100 characters or less' });
+  if (!name || name.length > 100) {
+    return res.status(400).json({ error: 'Family name is required and must be 100 characters or less' });
+  }
 
   try {
-    const familyMemberRepository = AppDataSource.getRepository(FamilyMember);
-    const existingMembership = await familyMemberRepository.findOneBy({ user_id });
-    if (existingMembership) {
+    const db = await initDb();
+    const existingFamily = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+    if (existingFamily) {
       return res.status(403).json({ error: 'User is already in a family' });
     }
 
-    const familyRepository = AppDataSource.getRepository(Family);
-    const family = new Family();
-    family.name = name;
-    family.owner_id = user_id;
-    await familyRepository.save(family);
-
-    const familyMember = new FamilyMember();
-    familyMember.family_id = family.id;
-    familyMember.user_id = user_id;
-    familyMember.role = 'admin';
-    await familyMemberRepository.save(familyMember);
-
-    res.status(201).json({ message: 'Family created', family_id: family.id });
-  } catch (err) {
-    console.error(`Create family error [user_id=${user_id}]:`, err);
+    const result = await db.run('INSERT INTO family (name, owner_id) VALUES (?, ?)', [name, user_id]);
+    const family_id = result.lastID;
+    await db.run('INSERT INTO family_member (family_id, user_id, role) VALUES (?, ?, ?)', [family_id, user_id, 'admin']);
+    res.status(200).json({ message: 'Family created', family_id });
+  } catch (error) {
+    console.error('Create family error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.post('/family', authenticate, createFamilyHandler);
-
-// Handle joining a family
-const joinFamilyHandler = async (req: Request, res: Response) => {
+// Join family
+app.post('/family/join', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
   const { family_id } = req.body;
 
-  if (!family_id) return res.status(400).json({ error: 'Family ID is required' });
+  if (!family_id) {
+    return res.status(400).json({ error: 'Family ID is required' });
+  }
 
   try {
-    const familyRepository = AppDataSource.getRepository(Family);
-    const family = await familyRepository.findOneBy({ id: family_id });
+    const db = await initDb();
+    const family = await db.get('SELECT id FROM family WHERE id = ?', [family_id]);
     if (!family) {
       return res.status(404).json({ error: 'Family not found' });
     }
 
-    const familyMemberRepository = AppDataSource.getRepository(FamilyMember);
-    const existingMembership = await familyMemberRepository.findOneBy({ user_id });
-    if (existingMembership) {
+    const existingFamily = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+    if (existingFamily) {
       return res.status(403).json({ error: 'User is already in a family' });
     }
 
-    const familyMember = new FamilyMember();
-    familyMember.family_id = family_id;
-    familyMember.user_id = user_id;
-    familyMember.role = 'member';
-    await familyMemberRepository.save(familyMember);
-
-    res.status(201).json({ message: 'Joined family' });
-  } catch (err) {
-    console.error(`Join family error [user_id=${user_id}, family_id=${family_id}]:`, err);
+    await db.run('INSERT INTO family_member (family_id, user_id, role) VALUES (?, ?, ?)', [family_id, user_id, 'member']);
+    res.status(200).json({ message: 'Joined family' });
+  } catch (error) {
+    console.error('Join family error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.post('/family/join', authenticate, joinFamilyHandler);
-
-// Handle retrieving user's families
-const myFamiliesHandler = async (req: Request, res: Response) => {
+// Get user's families
+app.get('/my-families', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
-
   try {
-    const families = await AppDataSource.getRepository(Family)
-      .createQueryBuilder('family')
-      .leftJoinAndSelect('family.members', 'family_member')
-      .where('family.owner_id = :user_id OR family_member.user_id = :user_id', { user_id })
-      .select(['family.id', 'family.name', 'family.owner_id', 'family_member.role'])
-      .getMany();
-
+    const db = await initDb();
+    const families = await db.all(
+      `SELECT f.id, f.name, f.owner_id, fm.role 
+       FROM family f 
+       LEFT JOIN family_member fm ON f.id = fm.family_id 
+       WHERE f.owner_id = ? OR fm.user_id = ?`,
+      [user_id, user_id]
+    );
     res.status(200).json({ families });
-  } catch (err) {
-    console.error(`My families error [user_id=${user_id}]:`, err);
+  } catch (error) {
+    console.error('Fetch families error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.get('/my-families', authenticate, myFamiliesHandler);
-
-// Handle retrieving family members
-const familyMembersHandler = async (req: Request, res: Response) => {
+// Get family members
+app.get('/family/members', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
   const family_id = req.query.family_id as string;
 
-  if (!family_id || isNaN(parseInt(family_id))) {
-    return res.status(400).json({ error: 'Valid Family ID is required' });
+  if (!family_id) {
+    return res.status(400).json({ error: 'Family ID is required' });
   }
 
   try {
-    const familyMemberRepository = AppDataSource.getRepository(FamilyMember);
-    const isMember = await familyMemberRepository.findOneBy({ family_id: parseInt(family_id), user_id });
+    const db = await initDb();
+    const isMember = await db.get('SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?', [family_id, user_id]);
     if (!isMember) {
       return res.status(403).json({ error: 'User is not a member of this family' });
     }
 
-    const members = await familyMemberRepository
-      .createQueryBuilder('family_member')
-      .leftJoinAndSelect('family_member.user', 'user')
-      .where('family_member.family_id = :family_id', { family_id: parseInt(family_id) })
-      .select(['family_member.user_id', 'user.username'])
-      .getMany();
-
-    res.status(200).json({ members: members.map((m) => ({ user_id: m.user_id, username: m.user.username })) });
-  } catch (err) {
-    console.error(`Family members error [user_id=${user_id}, family_id=${family_id}]:`, err);
+    const members = await db.all(
+      `SELECT u.id AS user_id, u.username
+       FROM family_member fm
+       JOIN user u ON fm.user_id = u.id
+       WHERE fm.family_id = ?`,
+      [family_id]
+    );
+    res.status(200).json({ members });
+  } catch (error) {
+    console.error('Fetch family members error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.get('/family/members', authenticate, familyMembersHandler);
-
-// Handle calendar events (GET)
-const calendarHandler = async (req: Request, res: Response) => {
+// Get calendar events
+app.get('/calendar', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
-
   try {
-    const familyMember = await AppDataSource.getRepository(FamilyMember).findOneBy({ user_id });
-    if (!familyMember) {
+    const db = await initDb();
+    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+    if (!family) {
       return res.status(403).json({ error: 'User not in a family' });
     }
 
-    const events = await AppDataSource.getRepository(Event).find({
-      where: { family_id: familyMember.family_id },
-      select: ['id', 'title', 'start_datetime', 'end_datetime', 'reminder_datetime', 'creator_id'],
-    });
-
+    const events = await db.all(
+      'SELECT id, title, start_datetime, end_datetime, reminder_datetime, creator_id FROM event WHERE family_id = ?',
+      [family.family_id]
+    );
     res.status(200).json({ events });
-  } catch (err) {
-    console.error(`Calendar error [user_id=${user_id}]:`, err);
+  } catch (error) {
+    console.error('Fetch calendar error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.get('/calendar', authenticate, calendarHandler);
-
-// Handle calendar events (POST)
-const createEventHandler = async (req: Request, res: Response) => {
+// Create calendar event
+app.post('/calendar', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
   const { title, start_datetime, end_datetime, reminder_datetime } = req.body;
 
-  if (!title || !start_datetime) return res.status(400).json({ error: 'Title and start date are required' });
-  if (title.length > 100) return res.status(400).json({ error: 'Title must be 100 characters or less' });
-  if (!Date.parse(start_datetime)) return res.status(400).json({ error: 'Invalid start date format' });
-  if (end_datetime && !Date.parse(end_datetime)) return res.status(400).json({ error: 'Invalid end date format' });
-  if (reminder_datetime && !Date.parse(reminder_datetime)) {
-    return res.status(400).json({ error: 'Invalid reminder date format' });
+  if (!title || !start_datetime) {
+    return res.status(400).json({ error: 'Title and start date are required' });
+  }
+  if (title.length > 100) {
+    return res.status(400).json({ error: 'Title must be 100 characters or less' });
   }
 
   try {
-    const familyMember = await AppDataSource.getRepository(FamilyMember).findOneBy({ user_id });
-    if (!familyMember) {
+    const db = await initDb();
+    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+    if (!family) {
       return res.status(403).json({ error: 'User not in a family' });
     }
 
-    const event = new Event();
-    event.family_id = familyMember.family_id;
-    event.creator_id = user_id;
-    event.title = title;
-    event.start_datetime = start_datetime;
-    event.end_datetime = end_datetime || null;
-    event.reminder_datetime = reminder_datetime || null;
-    event.created_at = new Date().toISOString();
-    await AppDataSource.getRepository(Event).save(event);
-
-    res.status(201).json({ message: 'Event created', event_id: event.id });
-  } catch (err) {
-    console.error(`Create event error [user_id=${user_id}]:`, err);
+    const created_at = new Date().toISOString();
+    const result = await db.run(
+      'INSERT INTO event (family_id, creator_id, title, start_datetime, end_datetime, reminder_datetime, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [family.family_id, user_id, title, start_datetime, end_datetime || null, reminder_datetime || null, created_at]
+    );
+    res.status(200).json({ message: 'Event created', event_id: result.lastID });
+  } catch (error) {
+    console.error('Create event error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.post('/calendar', authenticate, createEventHandler);
-
-// Handle tasks (GET)
-const tasksHandler = async (req: Request, res: Response) => {
+// Get tasks
+app.get('/tasks', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
-
   try {
-    const familyMember = await AppDataSource.getRepository(FamilyMember).findOneBy({ user_id });
-    if (!familyMember) {
+    const db = await initDb();
+    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+    if (!family) {
       return res.status(403).json({ error: 'User not in a family' });
     }
 
-    const tasks = await AppDataSource.getRepository(Task)
-      .createQueryBuilder('task')
-      .leftJoinAndSelect('task.assignee', 'user')
-      .where('task.family_id = :family_id', { family_id: familyMember.family_id })
-      .select([
-        'task.id',
-        'task.title',
-        'task.description',
-        'task.due_date',
-        'task.priority',
-        'task.status',
-        'task.creator_id',
-        'task.assignee_id',
-        'user.username',
-      ])
-      .getMany();
-
-    res.status(200).json({ tasks: tasks.map((t) => ({ ...t, assignee_username: t.assignee?.username })) });
-  } catch (err) {
-    console.error(`Tasks error [user_id=${user_id}]:`, err);
+    const tasks = await db.all(
+      'SELECT t.id, t.title, t.description, t.due_date, t.priority, t.status, t.creator_id, t.assignee_id, u.username AS assignee_username ' +
+      'FROM task t LEFT JOIN user u ON t.assignee_id = u.id WHERE t.family_id = ?',
+      [family.family_id]
+    );
+    res.status(200).json({ tasks });
+  } catch (error) {
+    console.error('Fetch tasks error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.get('/tasks', authenticate, tasksHandler);
-
-// Handle tasks (POST)
-const createTaskHandler = async (req: Request, res: Response) => {
+// Create task
+app.post('/tasks', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
   const { title, description, assignee_id, due_date, priority } = req.body;
 
-  if (!title) return res.status(400).json({ error: 'Title is required' });
-  if (title.length > 255) return res.status(400).json({ error: 'Title must be 255 characters or less' });
+  if (!title || title.length > 100) {
+    return res.status(400).json({ error: 'Title is required and must be 100 characters or less' });
+  }
   if (priority && !['low', 'medium', 'high'].includes(priority)) {
     return res.status(400).json({ error: 'Priority must be low, medium, or high' });
   }
-  if (due_date && !Date.parse(due_date)) return res.status(400).json({ error: 'Invalid due date format' });
 
   try {
-    const familyMemberRepository = AppDataSource.getRepository(FamilyMember);
-    const familyMember = await familyMemberRepository.findOneBy({ user_id });
-    if (!familyMember) {
+    const db = await initDb();
+    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+    if (!family) {
       return res.status(403).json({ error: 'User not in a family' });
     }
 
     if (assignee_id) {
-      const assignee = await familyMemberRepository.findOneBy({
-        family_id: familyMember.family_id,
-        user_id: assignee_id,
-      });
+      const assignee = await db.get('SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?', [family.family_id, assignee_id]);
       if (!assignee) {
         return res.status(400).json({ error: 'Assignee is not a member of this family' });
       }
     }
 
-    const task = new Task();
-    task.family_id = familyMember.family_id;
-    task.creator_id = user_id;
-    task.assignee_id = assignee_id || null;
-    task.title = title;
-    task.description = description || null;
-    task.due_date = due_date || null;
-    task.priority = priority || 'medium';
-    task.status = 'pending';
-    await AppDataSource.getRepository(Task).save(task);
-
-    console.log('Task created:', { task_id: task.id, title, family_id: task.family_id });
-    res.status(201).json({ message: 'Task created', task_id: task.id });
-  } catch (err) {
-    console.error(`Create task error [user_id=${user_id}]:`, err);
+    const created_at = new Date().toISOString();
+    const result = await db.run(
+      'INSERT INTO task (family_id, creator_id, assignee_id, title, description, due_date, priority, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [family.family_id, user_id, assignee_id || null, title, description || null, due_date || null, priority || 'medium', 'pending', created_at]
+    );
+    res.status(201).json({ message: 'Task created', task_id: result.lastID });
+  } catch (error) {
+    console.error('Create task error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.post('/tasks', authenticate, createTaskHandler);
-
-// Handle messages (GET)
-const messagesHandler = async (req: Request, res: Response) => {
+// Get messages
+app.get('/messages', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
-
   try {
-    const familyMember = await AppDataSource.getRepository(FamilyMember).findOneBy({ user_id });
-    if (!familyMember) {
+    const db = await initDb();
+    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+    if (!family) {
       return res.status(403).json({ error: 'User not in a family' });
     }
 
-    const messages = await AppDataSource.getRepository(Message)
-      .createQueryBuilder('message')
-      .leftJoinAndSelect('message.sender', 'user')
-      .where('message.family_id = :family_id', { family_id: familyMember.family_id })
-      .select(['message.id', 'message.content', 'message.sent_at', 'message.sender_id', 'user.username'])
-      .orderBy('message.sent_at', 'ASC')
-      .getMany();
-
-    res.status(200).json({ messages: messages.map((m) => ({ ...m, sender_username: m.sender.username })) });
-  } catch (err) {
-    console.error(`Messages error [user_id=${user_id}]:`, err);
+    const messages = await db.all(
+      'SELECT m.id, m.content, m.sent_at, m.sender_id, u.username AS sender_username ' +
+      'FROM message m JOIN user u ON m.sender_id = u.id WHERE m.family_id = ? ORDER BY m.sent_at ASC',
+      [family.family_id]
+    );
+    res.status(200).json({ messages });
+  } catch (error) {
+    console.error('Fetch messages error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+});
 
-server.get('/messages', authenticate, messagesHandler);
-
-// Handle messages (POST)
-const createMessageHandler = async (req: Request, res: Response) => {
+// Create message
+app.post('/messages', authenticate, async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
   const { content } = req.body;
 
-  if (!content) return res.status(400).json({ error: 'Message content is required' });
-  if (content.length > 1000) return res.status(400).json({ error: 'Message must be 1000 characters or less' });
+  if (!content || content.length > 1000) {
+    return res.status(400).json({ error: 'Message content is required and must be 1000 characters or less' });
+  }
 
   try {
-    const familyMember = await AppDataSource.getRepository(FamilyMember).findOneBy({ user_id });
-    if (!familyMember) {
+    const db = await initDb();
+    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+    if (!family) {
       return res.status(403).json({ error: 'User not in a family' });
     }
 
-    const message = new Message();
-    message.family_id = familyMember.family_id;
-    message.sender_id = user_id;
-    message.content = content;
-    message.sent_at = new Date().toISOString();
-    await AppDataSource.getRepository(Message).save(message);
-
-    res.status(201).json({ message: 'Message sent', message_id: message.id });
-  } catch (err) {
-    console.error(`Create message error [user_id=${user_id}]:`, err);
+    const sent_at = new Date().toISOString();
+    const result = await db.run(
+      'INSERT INTO message (family_id, sender_id, content, sent_at) VALUES (?, ?, ?, ?)',
+      [family.family_id, user_id, content, sent_at]
+    );
+    res.status(200).json({ message: 'Message sent', message_id: result.lastID });
+  } catch (error) {
+    console.error('Create message error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
-
-server.post('/messages', authenticate, createMessageHandler);
+});
 
 // Start server
-const port = parseInt(process.env.PORT || '8100');
-server.listen(port, () => {
-  print(port);
+app.listen(PORT, () => {
+  print(PORT);
 });

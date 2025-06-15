@@ -1,4 +1,4 @@
 # Node.js 依賴
 node_modules/
 package-lock.json
-db.sqlite3
+database.db
