@@ -55,28 +55,6 @@
         console.log("DOM loaded for login.html");
         console.log("Ionic version:", window.Ionic?.version || "Not loaded");
 
-        // Menu navigation
-        const navItems = {
-          "nav-login": "/login.html",
-          "nav-register": "/register.html",
-        };
-        Object.keys(navItems).forEach((id) => {
-          const item = document.getElementById(id);
-          item?.addEventListener("click", () => {
-            console.log(`Navigating to ${navItems[id]}`);
-            window.location.href = navItems[id];
-          });
-        });
-
-        // Check for existing token
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-        if (token) {
-          console.log("Token found, redirecting to /calendar.html");
-          window.location.href = "/calendar.html";
-          return;
-        }
-        console.log("No token found, staying on login page");
-
         const loginForm = document.getElementById("login_form");
         const usernameInput = document.getElementById("username");
         const passwordInput = document.getElementById("password");
@@ -84,6 +62,20 @@
         const loginButton = document.getElementById("login_button");
         const usernameError = document.getElementById("username_error");
         const passwordError = document.getElementById("password_error");
+
+        // Toast 顯示輔助函數
+        async function showToast(message, duration, color) {
+          if (window.Ionic) {
+            const toast = document.createElement("ion-toast");
+            toast.message = message;
+            toast.duration = duration;
+            toast.color = color;
+            document.body.appendChild(toast);
+            await toast.present();
+          } else {
+            alert(message);
+          }
+        }
 
         // Input validation
         usernameInput?.addEventListener("input", () => {
@@ -129,7 +121,7 @@
               throw new Error(data.error || "Login failed");
             }
 
-            const token = data.data.token; // 與後端一致
+            const token = data.data.token;
             if (remember) {
               localStorage.setItem("token", token);
               sessionStorage.removeItem("token");
@@ -140,23 +132,12 @@
               console.log("Token stored in sessionStorage");
             }
 
-            const toast = document.createElement("ion-toast");
-            toast.message = "Login Successful";
-            toast.duration = 2000;
-            toast.color = "success";
-            document.body.appendChild(toast);
-            await toast.present();
-
-            console.log("Redirecting to /calendar.html");
-            window.location.href = "/calendar.html";
+            await showToast("Login Successful", 2000, "success");
+            console.log("Redirecting to /family.html");
+            window.location.href = "/family.html";
           } catch (error) {
             console.error("Login error:", error.message);
-            const toast = document.createElement("ion-toast");
-            toast.message = `Failed to login: ${error.message}`;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            await toast.present();
+            await showToast(`Failed to login: ${error.message}`, 2000, "danger");
           } finally {
             loginButton.disabled = false;
             loginButton.querySelector("ion-spinner").hidden = true;

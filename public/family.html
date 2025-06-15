@@ -58,7 +58,7 @@
             <ion-card-content>
               <ion-list id="family-list">
                 <ion-item>
-                  <ion-label>未找到家庭</ion-label>
+                  <ion-label>載入中...</ion-label>
                 </ion-item>
               </ion-list>
             </ion-card-content>
@@ -146,12 +146,6 @@
         }
         console.log("找到 token:", token.substring(0, 20) + "...");
 
-        // 防循環檢查
-        const lastRedirect = sessionStorage.getItem("lastRedirect");
-        if (lastRedirect === "calendar") {
-          console.log("檢測到從 calendar.html 重定向，停止跳轉以避免循環");
-        }
-
         // 選單導航
         const navItems = {
           "nav-dashboard": "/index.html",
@@ -165,7 +159,6 @@
           item?.addEventListener("click", () => {
             const url = navItems[id];
             console.log(`正在跳轉到 ${url}`);
-            sessionStorage.setItem("lastRedirect", url === "/calendar.html" ? "family" : "");
             window.location.href = url;
           });
         });
@@ -175,42 +168,21 @@
           console.log("點擊登出");
           localStorage.removeItem("token");
           sessionStorage.removeItem("token");
-          sessionStorage.removeItem("lastRedirect");
           console.log("已登出，清除 token");
           window.location.href = "/login.html";
         });
 
-        async function checkFamilyStatus() {
-          try {
-            console.log("檢查用戶家庭狀態");
-            const response = await fetch("http://localhost:8100/my-families", {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            });
-            const data = await response.json();
-            console.log("檢查家庭狀態回應:", data);
-            if (!response.ok) {
-              throw new Error(data.error || "無法檢查家庭狀態");
-            }
-            if (data.families && data.families.length > 0) {
-              console.log("用戶已加入家庭，跳轉到 /calendar.html");
-              sessionStorage.setItem("lastRedirect", "family");
-              window.location.href = "/calendar.html";
-              return true;
-            }
-            return false;
-          } catch (error) {
-            console.error("檢查家庭狀態錯誤:", error);
+        // Toast 顯示輔助函數
+        async function showToast(message, duration, color) {
+          if (window.Ionic) {
             const toast = document.createElement("ion-toast");
-            toast.message = `無法檢查家庭狀態: ${error.message}`;
-            toast.duration = 2000;
-            toast.color = "danger";
+            toast.message = message;
+            toast.duration = duration;
+            toast.color = color;
             document.body.appendChild(toast);
             await toast.present();
-            return false;
+          } else {
+            alert(message);
           }
         }
 
@@ -225,15 +197,15 @@
               },
             });
             const data = await response.json();
-            console.log("獲取家庭回應:", data);
+            console.log("獲取家庭回應:", JSON.stringify(data, null, 2));
             if (!response.ok) {
               throw new Error(data.error || "無法獲取家庭");
             }
 
             const familyList = document.getElementById("family-list");
-            familyList.innerHTML = "";
+            familyList.innerHTML = ""; // 清空列表
 
-            const families = Array.isArray(data.families) ? data.families : [];
+            const families = data.success && data.data && Array.isArray(data.data.families) ? data.data.families : [];
             console.log("處理家庭數據:", families);
 
             if (families.length === 0) {
@@ -255,7 +227,7 @@
                   if (!memberResponse.ok) {
                     throw new Error(memberData.error || "無法獲取成員");
                   }
-                  members = Array.isArray(memberData.members) ? memberData.members : [];
+                  members = Array.isArray(memberData.data.members) ? memberData.data.members : [];
                 } catch (error) {
                   console.error(`獲取家庭 ${family.id} 的成員錯誤:`, error);
                   members = [];
@@ -271,27 +243,15 @@
                 `;
                 familyList.appendChild(item);
               }
-              // 若有家庭，檢查是否需要跳轉
-              if (await checkFamilyStatus()) return;
             }
           } catch (error) {
             console.error("獲取家庭錯誤:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = `無法載入家庭列表: ${error.message || '伺服器響應異常'}`;
-            toast.duration = 3000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            await toast.present();
+            await showToast(`無法載入家庭列表: ${error.message || '伺服器響應異常'}`, 3000, "danger");
           }
         }
 
-        // 初始檢查家庭狀態
-        if (await checkFamilyStatus()) return;
-
-        // 延遲執行 fetchFamilies
-        setTimeout(async () => {
-          await fetchFamilies();
-        }, 100);
+        // 載入家庭列表
+        await fetchFamilies();
 
         document.getElementById("create_family_form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
@@ -314,26 +274,19 @@
             if (!response.ok) {
               throw new Error(data.error || "無法創建家庭");
             }
-            const toast = document.createElement("ion-toast");
-            toast.message = `家庭已創建 (ID: ${data.family_id})`;
-            toast.duration = 2000;
-            toast.color = "success";
-            document.body.appendChild(toast);
-            await toast.present();
+            await showToast(`家庭已創建 (ID: ${data.data.family_id})`, 2000, "success");
             form.reset();
-            // 強制跳轉到 /calendar.html
-            sessionStorage.setItem("lastRedirect", "family");
-            window.location.href = "/calendar.html";
+            await fetchFamilies(); // 刷新列表
           } catch (error) {
             console.error("創建家庭錯誤:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = `無法創建家庭: ${error.message}`;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            await toast.present();
-            // 刷新家庭列表以檢查狀態
-            await fetchFamilies();
+            await showToast(
+              error.message === "User is already in a family"
+                ? "您已經加入一個家庭，無法創建新家庭"
+                : `無法創建家庭: ${error.message}`,
+              2000,
+              "danger"
+            );
+            await fetchFamilies(); // 刷新列表
           }
         });
 
@@ -358,26 +311,19 @@
             if (!response.ok) {
               throw new Error(data.error || "無法加入家庭");
             }
-            const toast = document.createElement("ion-toast");
-            toast.message = "已加入家庭";
-            toast.duration = 2000;
-            toast.color = "success";
-            document.body.appendChild(toast);
-            await toast.present();
+            await showToast("已加入家庭", 2000, "success");
             form.reset();
-            // 強制跳轉到 /calendar.html
-            sessionStorage.setItem("lastRedirect", "family");
-            window.location.href = "/calendar.html";
+            await fetchFamilies(); // 刷新列表
           } catch (error) {
             console.error("加入家庭錯誤:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = `無法加入家庭: ${error.message}`;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            await toast.present();
-            // 刷新家庭列表以檢查狀態
-            await fetchFamilies();
+            await showToast(
+              error.message === "User is already in a family"
+                ? "您已經加入一個家庭，無法加入其他家庭"
+                : `無法加入家庭: ${error.message}`,
+              2000,
+              "danger"
+            );
+            await fetchFamilies(); // 刷新列表
           }
         });
       });

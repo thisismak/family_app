@@ -42,17 +42,17 @@
       <ion-menu content-id="main-content" side="start">
         <ion-header>
           <ion-toolbar>
-            <ion-title>Menu</ion-title>
+            <ion-title>選單</ion-title>
           </ion-toolbar>
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
-            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
-            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
-            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
-            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
-            <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>Sign Out</ion-item>
+            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>儀表板</ion-item>
+            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>日曆</ion-item>
+            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>任務</ion-item>
+            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>聊天</ion-item>
+            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>家庭</ion-item>
+            <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>登出</ion-item>
           </ion-list>
         </ion-content>
       </ion-menu>
@@ -62,18 +62,18 @@
             <ion-buttons slot="start">
               <ion-menu-button></ion-menu-button>
             </ion-buttons>
-            <ion-title>S&S Family App</ion-title>
+            <ion-title>S&S 家庭應用程式 - 聊天</ion-title>
           </ion-toolbar>
         </ion-header>
         <ion-content class="ion-padding">
-          <img src="/assets/family-logo.png" alt="Family Logo" class="family-logo" />
+          <img src="/assets/family-logo.png" alt="家庭標誌" class="family-logo" />
           <div class="welcome-message">
-            <h2>Family Chat</h2>
-            <p>Stay connected with your loved ones.</p>
+            <h2>家庭聊天</h2>
+            <p>與您的家人保持聯繫。</p>
           </div>
           <ion-card>
             <ion-card-header>
-              <ion-card-title>Send Message</ion-card-title>
+              <ion-card-title>發送訊息</ion-card-title>
             </ion-card-header>
             <ion-card-content>
               <form id="message_form" class="ion-padding">
@@ -81,11 +81,11 @@
                   <ion-row>
                     <ion-col>
                       <ion-item>
-                        <ion-label position="stacked">Message</ion-label>
+                        <ion-label position="stacked">訊息</ion-label>
                         <ion-textarea
                           name="content"
                           id="content"
-                          placeholder="Type your message"
+                          placeholder="輸入您的訊息"
                           required
                         ></ion-textarea>
                       </ion-item>
@@ -93,7 +93,7 @@
                   </ion-row>
                   <ion-row>
                     <ion-col>
-                      <ion-button expand="block" type="submit">Send</ion-button>
+                      <ion-button expand="block" type="submit" id="submit_message">發送</ion-button>
                     </ion-col>
                   </ion-row>
                 </ion-grid>
@@ -105,7 +105,7 @@
         <ion-footer>
           <ion-toolbar>
             <ion-title size="small" class="ion-text-center">
-              © 2025 S&S Family App. All rights reserved.
+              © 2025 S&S 家庭應用程式。版權所有。
             </ion-title>
           </ion-toolbar>
         </ion-footer>
@@ -113,18 +113,18 @@
     </ion-app>
 
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        console.log("DOM loaded for chat.html");
-        console.log("Ionic version:", window.Ionic?.version || "Not loaded");
+      document.addEventListener("DOMContentLoaded", async () => {
+        console.log("DOM 已載入 chat.html");
+        console.log("Ionic 版本:", window.Ionic?.version || "未載入");
         const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
         if (!token) {
-          console.log("No token found, redirecting to /login.html");
+          console.log("未找到 token，正在跳轉到 /login.html");
           window.location.href = "/login.html";
           return;
         }
-        console.log("Token found:", token);
+        console.log("找到 token:", token.substring(0, 20) + "...");
 
-        // Menu navigation
+        // 選單導航
         const navItems = {
           "nav-dashboard": "/index.html",
           "nav-calendar": "/calendar.html",
@@ -134,102 +134,117 @@
         };
         Object.keys(navItems).forEach((id) => {
           const item = document.getElementById(id);
-          item.addEventListener("click", () => {
+          item?.addEventListener("click", () => {
             const url = navItems[id];
-            console.log(`Navigating to ${url}`);
+            console.log(`正在跳轉到 ${url}`);
             window.location.href = url;
           });
         });
 
-        // Sign out
-        document.getElementById("signOut").addEventListener("click", async () => {
-          console.log("Sign out clicked");
-          try {
-            await fetch(`http://localhost:8100/logout?token=${encodeURIComponent(token)}`, {
-              method: "GET",
-            });
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            console.log("Logged out, cleared token");
-            window.location.href = "/login.html";
-          } catch (err) {
-            console.error("Error during sign out:", err);
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            window.location.href = "/login.html";
-          }
+        // 登出
+        document.getElementById("signOut")?.addEventListener("click", () => {
+          console.log("點擊登出");
+          localStorage.removeItem("token");
+          sessionStorage.removeItem("token");
+          console.log("已登出，清除 token");
+          window.location.href = "/login.html";
         });
 
+        // Toast 顯示輔助函數
+        async function showToast(message, duration, color) {
+          if (window.Ionic) {
+            const toast = document.createElement("ion-toast");
+            toast.message = message;
+            toast.duration = duration;
+            toast.color = color;
+            document.body.appendChild(toast);
+            await toast.present();
+          } else {
+            alert(message);
+          }
+        }
+
+        async function checkFamilyStatus() {
+          try {
+            console.log("檢查用戶家庭狀態");
+            const response = await fetch("http://localhost:8100/my-families", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            const data = await response.json();
+            console.log("檢查家庭狀態回應:", JSON.stringify(data, null, 2));
+            if (!response.ok) {
+              throw new Error(data.error || "無法檢查家庭狀態");
+            }
+            return data.success && data.families && data.families.length > 0;
+          } catch (error) {
+            console.error("檢查家庭狀態錯誤:", error);
+            await showToast(`無法檢查家庭狀態: ${error.message}`, 2000, "danger");
+            return false;
+          }
+        }
+
         const chatList = document.getElementById("chat_list");
+        const messageForm = document.getElementById("message_form");
+        const submitMessageButton = document.getElementById("submit_message");
+
+        // 檢查家庭狀態
+        const hasFamily = await checkFamilyStatus();
+        if (!hasFamily) {
+          await showToast("您尚未加入任何家庭，請先創建或加入家庭", 3000, "warning");
+          chatList.innerHTML = `<ion-item><ion-label>請先創建或加入家庭以使用聊天功能</ion-label></ion-item>`;
+          submitMessageButton.disabled = true;
+          return;
+        }
 
         async function fetchUser() {
           try {
-            console.log("Fetching user info");
+            console.log("正在獲取用戶資訊");
             const response = await fetch("http://localhost:8100/user", {
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: token,
+                Authorization: `Bearer ${token}`,
               },
             });
             const data = await response.json();
-            console.log("Fetch user response:", data);
+            console.log("獲取用戶回應:", data);
             if (!response.ok) {
-              throw new Error(data.error || "Failed to fetch user data");
+              throw new Error(data.error || "無法獲取用戶資料");
             }
             return {
-              username: data.username || "Guest",
-              email: data.email || "No email",
-              user_id: data.user_id,
+              username: data.user.username || "Guest",
+              email: data.user.email || "無電子郵件",
+              user_id: data.user.user_id,
             };
           } catch (err) {
-            console.error("Error fetching user:", err);
-            return { username: "Guest", email: "Not logged in", user_id: null };
+            console.error("獲取用戶錯誤:", err);
+            return { username: "Guest", email: "未登入", user_id: null };
           }
         }
 
         async function fetchMessages() {
           try {
-            console.log("Fetching messages");
+            console.log("正在獲取訊息列表");
             const response = await fetch("http://localhost:8100/messages", {
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: token,
+                Authorization: `Bearer ${token}`,
               },
             });
             const data = await response.json();
-            console.log("Fetch messages response:", data);
+            console.log("獲取訊息回應:", data);
             if (!response.ok) {
-              if (data.error === "User not in a family") {
-                console.log("User not in a family, showing toast");
-                const toast = document.createElement("ion-toast");
-                toast.message = "Please create or join a family first";
-                toast.duration = 3000;
-                toast.color = "warning";
-                toast.buttons = [
-                  {
-                    text: "Go to Family",
-                    handler: () => {
-                      console.log("Toast button clicked, redirecting to /family.html");
-                      window.location.href = "/family.html";
-                    },
-                  },
-                ];
-                document.body.appendChild(toast);
-                toast.present().catch((err) => console.error("Toast present error:", err));
-              }
-              throw new Error(data.error || "Failed to fetch messages");
+              throw new Error(data.error || "無法獲取訊息");
             }
-            return data.messages;
+            return Array.isArray(data.messages) ? data.messages : [];
           } catch (error) {
-            console.error("Error fetching messages:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = "Failed to load messages: " + error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            console.error("獲取訊息錯誤:", error);
+            await showToast(`無法載入訊息列表: ${error.message}`, 2000, "danger");
             return [];
           }
         }
@@ -239,97 +254,64 @@
             const messages = await fetchMessages();
             const user = await fetchUser();
             chatList.innerHTML = "";
-            messages.forEach(message => {
-              const div = document.createElement("div");
-              div.className = `message ${message.sender_id === user.user_id ? 'sent' : 'received'}`;
-              div.innerHTML = `
-                <ion-avatar slot="start">
-                  <img src="/assets/user-${message.sender_id}.png" alt="${message.sender_username}" onerror="this.src='/assets/user-default.png'" />
-                </ion-avatar>
-                <strong>${message.sender_username}</strong> (${new Date(message.sent_at).toLocaleString()}):
-                <p>${message.content}</p>
-              `;
-              chatList.appendChild(div);
-            });
+            if (messages.length === 0) {
+              chatList.innerHTML = `<ion-item><ion-label>未找到訊息</ion-label></ion-item>`;
+            } else {
+              messages.forEach((message) => {
+                const div = document.createElement("div");
+                div.className = `message ${message.sender_id === user.user_id ? "sent" : "received"}`;
+                div.innerHTML = `
+                  <ion-avatar slot="start">
+                    <img src="/assets/user-${message.sender_id}.png" alt="${message.sender_username}" onerror="this.src='/assets/user-default.png'" />
+                  </ion-avatar>
+                  <strong>${message.sender_username}</strong> (${new Date(message.sent_at).toLocaleString()}):
+                  <p>${message.content}</p>
+                `;
+                chatList.appendChild(div);
+              });
+            }
             chatList.scrollTop = chatList.scrollHeight;
           } catch (error) {
-            console.error("Error rendering messages:", error);
+            console.error("渲染訊息錯誤:", error);
           }
         }
 
-        renderMessages();
+        await renderMessages();
         setInterval(renderMessages, 5000);
 
-        document.getElementById("message_form").addEventListener("submit", async (event) => {
+        messageForm?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const form = event.target;
           const formData = new FormData(form);
-          const content = formData.get("content");
-          console.log("Message form submitted:", { content });
+          const content = formData.get("content")?.toString().trim();
+          console.log("訊息表單提交:", { content });
 
           if (!content) {
-            console.log("Missing message content");
-            const toast = document.createElement("ion-toast");
-            toast.message = "Message content is required";
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await showToast("訊息內容為必填", 2000, "danger");
             return;
           }
 
           try {
-            console.log("Sending message creation request");
+            console.log("正在發送訊息創建請求");
             const response = await fetch("http://localhost:8100/messages", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: token,
+                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ content }),
             });
             const data = await response.json();
-            console.log("Message creation response:", data);
+            console.log("訊息創建回應:", data);
             if (!response.ok) {
-              if (data.error === "User not in a family") {
-                console.log("User not in a family, showing toast");
-                const toast = document.createElement("ion-toast");
-                toast.message = "Please create or join a family first";
-                toast.duration = 3000;
-                toast.color = "warning";
-                toast.buttons = [
-                  {
-                    text: "Go to Family",
-                    handler: () => {
-                      console.log("Toast button clicked, redirecting to /family.html");
-                      window.location.href = "/family.html";
-                    },
-                  },
-                ];
-                document.body.appendChild(toast);
-                toast.present().catch((err) => console.error("Toast present error:", err));
-              } else {
-                throw new Error(data.error || "Failed to send message");
-              }
-            } else {
-              console.log("Message sent, refetching messages");
-              renderMessages();
-              const toast = document.createElement("ion-toast");
-              toast.message = "Message Sent";
-              toast.duration = 2000;
-              toast.color = "success";
-              document.body.appendChild(toast);
-              toast.present().catch((err) => console.error("Toast present error:", err));
-              form.reset();
+              throw new Error(data.error || "無法發送訊息");
             }
+            await showToast("訊息已發送", 2000, "success");
+            form.reset();
+            await renderMessages();
           } catch (error) {
-            console.error("Error sending message:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = "Failed to send message: " + error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            console.error("發送訊息錯誤:", error);
+            await showToast(`無法發送訊息: ${error.message}`, 2000, "danger");
           }
         });
       });

@@ -26,17 +26,17 @@
       <ion-menu content-id="main-content" side="start">
         <ion-header>
           <ion-toolbar>
-            <ion-title>Menu</ion-title>
+            <ion-title>選單</ion-title>
           </ion-toolbar>
         </ion-header>
         <ion-content>
           <ion-list>
-            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
-            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
-            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
-            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
-            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
-            <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>Sign Out</ion-item>
+            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>儀表板</ion-item>
+            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>日曆</ion-item>
+            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>任務</ion-item>
+            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>聊天</ion-item>
+            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>家庭</ion-item>
+            <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>登出</ion-item>
           </ion-list>
         </ion-content>
       </ion-menu>
@@ -46,18 +46,18 @@
             <ion-buttons slot="start">
               <ion-menu-button></ion-menu-button>
             </ion-buttons>
-            <ion-title>S&S Family App</ion-title>
+            <ion-title>S&S 家庭應用程式 - 任務</ion-title>
           </ion-toolbar>
         </ion-header>
         <ion-content class="ion-padding">
-          <img src="/assets/family-logo.png" alt="Family Logo" class="family-logo" />
+          <img src="/assets/family-logo.png" alt="家庭標誌" class="family-logo" />
           <div class="welcome-message">
-            <h2>Family Tasks</h2>
-            <p>Keep your family organized with shared tasks.</p>
+            <h2>家庭任務</h2>
+            <p>與家人共享任務，保持井然有序。</p>
           </div>
           <ion-card>
             <ion-card-header>
-              <ion-card-title>Add Task</ion-card-title>
+              <ion-card-title>新增任務</ion-card-title>
             </ion-card-header>
             <ion-card-content>
               <form id="task_form" class="ion-padding">
@@ -65,12 +65,12 @@
                   <ion-row>
                     <ion-col>
                       <ion-item>
-                        <ion-label position="stacked">Task Title</ion-label>
+                        <ion-label position="stacked">任務標題</ion-label>
                         <ion-input
                           type="text"
                           name="title"
                           id="title"
-                          placeholder="Enter task title"
+                          placeholder="輸入任務標題"
                           required
                         ></ion-input>
                       </ion-item>
@@ -79,11 +79,11 @@
                   <ion-row>
                     <ion-col>
                       <ion-item>
-                        <ion-label position="stacked">Description (Optional)</ion-label>
+                        <ion-label position="stacked">描述（可選）</ion-label>
                         <ion-textarea
                           name="description"
                           id="description"
-                          placeholder="Enter task description"
+                          placeholder="輸入任務描述"
                         ></ion-textarea>
                       </ion-item>
                     </ion-col>
@@ -91,13 +91,13 @@
                   <ion-row>
                     <ion-col size="12" size-md="6">
                       <ion-item>
-                        <ion-label position="stacked">Assignee (Optional)</ion-label>
-                        <ion-select name="assignee_id" id="assignee_id" placeholder="Select family member"></ion-select>
+                        <ion-label position="stacked">指派人（可選）</ion-label>
+                        <ion-select name="assignee_id" id="assignee_id" placeholder="選擇家庭成員"></ion-select>
                       </ion-item>
                     </ion-col>
                     <ion-col size="12" size-md="6">
                       <ion-item>
-                        <ion-label position="stacked">Due Date (Optional)</ion-label>
+                        <ion-label position="stacked">到期日（可選）</ion-label>
                         <ion-datetime
                           name="due_date"
                           id="due_date"
@@ -109,18 +109,18 @@
                   <ion-row>
                     <ion-col>
                       <ion-item>
-                        <ion-label position="stacked">Priority</ion-label>
+                        <ion-label position="stacked">優先級</ion-label>
                         <ion-select name="priority" id="priority" value="medium">
-                          <ion-select-option value="low">Low</ion-select-option>
-                          <ion-select-option value="medium">Medium</ion-select-option>
-                          <ion-select-option value="high">High</ion-select-option>
+                          <ion-select-option value="low">低</ion-select-option>
+                          <ion-select-option value="medium">中</ion-select-option>
+                          <ion-select-option value="high">高</ion-select-option>
                         </ion-select>
                       </ion-item>
                     </ion-col>
                   </ion-row>
                   <ion-row>
                     <ion-col>
-                      <ion-button expand="block" type="submit">Add Task</ion-button>
+                      <ion-button expand="block" type="submit" id="submit_task">新增任務</ion-button>
                     </ion-col>
                   </ion-row>
                 </ion-grid>
@@ -132,7 +132,7 @@
         <ion-footer>
           <ion-toolbar>
             <ion-title size="small" class="ion-text-center">
-              © 2025 S&S Family App. All rights reserved.
+              © 2025 S&S 家庭應用程式。版權所有。
             </ion-title>
           </ion-toolbar>
         </ion-footer>
@@ -140,18 +140,18 @@
     </ion-app>
 
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        console.log("DOM loaded for tasks.html");
-        console.log("Ionic version:", window.Ionic?.version || "Not loaded");
+      document.addEventListener("DOMContentLoaded", async () => {
+        console.log("DOM 已載入 tasks.html");
+        console.log("Ionic 版本:", window.Ionic?.version || "未載入");
         const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
         if (!token) {
-          console.log("No token found, redirecting to /login.html");
+          console.log("未找到 token，正在跳轉到 /login.html");
           window.location.href = "/login.html";
           return;
         }
-        console.log("Token found:", token);
+        console.log("找到 token:", token.substring(0, 20) + "...");
 
-        // Menu navigation
+        // 選單導航
         const navItems = {
           "nav-dashboard": "/index.html",
           "nav-calendar": "/calendar.html",
@@ -161,170 +161,194 @@
         };
         Object.keys(navItems).forEach((id) => {
           const item = document.getElementById(id);
-          item.addEventListener("click", () => {
+          item?.addEventListener("click", () => {
             const url = navItems[id];
-            console.log(`Navigating to ${url}`);
+            console.log(`正在跳轉到 ${url}`);
             window.location.href = url;
           });
         });
 
-        // Sign out
-        document.getElementById("signOut").addEventListener("click", async () => {
-          console.log("Sign out clicked");
-          try {
-            await fetch(`http://localhost:8100/logout?token=${encodeURIComponent(token)}`, {
-              method: "GET",
-            });
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            console.log("Logged out, cleared token");
-            window.location.href = "/login.html";
-          } catch (err) {
-            console.error("Error during sign out:", err);
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            window.location.href = "/login.html";
-          }
+        // 登出
+        document.getElementById("signOut")?.addEventListener("click", () => {
+          console.log("點擊登出");
+          localStorage.removeItem("token");
+          sessionStorage.removeItem("token");
+          console.log("已登出，清除 token");
+          window.location.href = "/login.html";
         });
 
+        // Toast 顯示輔助函數
+        async function showToast(message, duration, color) {
+          if (window.Ionic) {
+            const toast = document.createElement("ion-toast");
+            toast.message = message;
+            toast.duration = duration;
+            toast.color = color;
+            document.body.appendChild(toast);
+            await toast.present();
+          } else {
+            alert(message);
+          }
+        }
+
+        async function checkFamilyStatus() {
+          try {
+            console.log("檢查用戶家庭狀態");
+            const response = await fetch("http://localhost:8100/my-families", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            const data = await response.json();
+            console.log("檢查家庭狀態回應:", JSON.stringify(data, null, 2));
+            if (!response.ok) {
+              throw new Error(data.error || "無法檢查家庭狀態");
+            }
+            return {
+              hasFamily: data.success && data.families && data.families.length > 0,
+              familyId: data.families && data.families.length > 0 ? data.families[0].id : null,
+            };
+          } catch (error) {
+            console.error("檢查家庭狀態錯誤:", error);
+            await showToast(`無法檢查家庭狀態: ${error.message}`, 2000, "danger");
+            return { hasFamily: false, familyId: null };
+          }
+        }
+
         const taskList = document.getElementById("task_list");
+        const taskForm = document.getElementById("task_form");
+        const submitTaskButton = document.getElementById("submit_task");
         const assigneeSelect = document.getElementById("assignee_id");
+
+        // 檢查家庭狀態
+        const { hasFamily, familyId } = await checkFamilyStatus();
+        if (!hasFamily) {
+          await showToast("您尚未加入任何家庭，請先創建或加入家庭", 3000, "warning");
+          taskList.innerHTML = `<ion-item><ion-label>請先創建或加入家庭以查看和管理任務</ion-label></ion-item>`;
+          submitTaskButton.disabled = true;
+          assigneeSelect.innerHTML = '<ion-select-option value="">無</ion-select-option>';
+          return;
+        }
 
         async function fetchFamilyMembers() {
           try {
-            console.log("Fetching tasks");
+            console.log("正在獲取家庭成員，家庭 ID:", familyId);
+            const response = await fetch(`http://localhost:8100/family/members?family_id=${familyId}`, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            const data = await response.json();
+            console.log("獲取家庭成員回應:", data);
+            if (!response.ok) {
+              throw new Error(data.error || "無法獲取家庭成員");
+            }
+            assigneeSelect.innerHTML = '<ion-select-option value="">無</ion-select-option>';
+            if (Array.isArray(data.members)) {
+              data.members.forEach((member) => {
+                const option = document.createElement("ion-select-option");
+                option.value = member.user_id;
+                option.textContent = member.username;
+                assigneeSelect.appendChild(option);
+              });
+            }
+          } catch (error) {
+            console.error("獲取家庭成員錯誤:", error);
+            await showToast(`無法載入家庭成員: ${error.message}`, 2000, "danger");
+          }
+        }
+
+        async function fetchTasks() {
+          try {
+            console.log("正在獲取任務列表");
             const response = await fetch("http://localhost:8100/tasks", {
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: token,
+                Authorization: `Bearer ${token}`,
               },
             });
             const data = await response.json();
-            console.log("Fetch tasks response:", data);
+            console.log("獲取任務回應:", data);
             if (!response.ok) {
-              if (data.error === "User not in a family") {
-                console.log("User not in a family, showing toast");
-                const toast = document.createElement("ion-toast");
-                toast.message = "Please create or join a family first";
-                toast.duration = 3000;
-                toast.color = "warning";
-                toast.buttons = [
-                  {
-                    text: "Go to Family",
-                    handler: () => {
-                      console.log("Toast button clicked, redirecting to /family.html");
-                      window.location.href = "/family.html";
-                    },
-                  },
-                ];
-                document.body.appendChild(toast);
-                toast.present().catch((err) => console.error("Toast present error:", err));
-              }
-              throw new Error(data.error || "Failed to fetch tasks");
+              throw new Error(data.error || "無法獲取任務");
             }
-            console.log("Fetching family members");
-            const familyResponse = await fetch("http://localhost:8100/family/members", {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-            });
-            const familyData = await familyResponse.json();
-            console.log("Fetch family members response:", familyData);
-            if (!familyResponse.ok) {
-              throw new Error(familyData.error || "Failed to fetch family members");
-            }
-            assigneeSelect.innerHTML = '<ion-select-option value="">None</ion-select-option>';
-            familyData.members.forEach(member => {
-              const option = document.createElement("ion-select-option");
-              option.value = member.user_id;
-              option.textContent = member.username;
-              assigneeSelect.appendChild(option);
-            });
-            return data.tasks;
+            return Array.isArray(data.tasks) ? data.tasks : [];
           } catch (error) {
-            console.error("Error fetching family members or tasks:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = "Failed to load tasks: " + error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            console.error("獲取任務錯誤:", error);
+            await showToast(`無法載入任務列表: ${error.message}`, 2000, "danger");
             return [];
           }
         }
 
         async function renderTasks() {
           try {
-            const tasks = await fetchFamilyMembers();
+            await fetchFamilyMembers();
+            const tasks = await fetchTasks();
             taskList.innerHTML = "";
-            tasks.forEach(task => {
-              const item = document.createElement("ion-item");
-              item.className = task.status === "completed" ? "completed" : "";
-              item.innerHTML = `
-                <ion-avatar slot="start">
-                  <img src="/assets/user-${task.assignee_id || 'default'}.png" alt="${task.assignee_username || 'No assignee'}" onerror="this.src='/assets/user-default.png'" />
-                </ion-avatar>
-                <ion-label>
-                  <h2>${task.title}</h2>
-                  <p>${task.description || "No description"}</p>
-                  <p>Assignee: ${task.assignee_username || "None"}</p>
-                  <p>Due: ${task.due_date ? new Date(task.due_date).toLocaleDateString() : "No due date"}</p>
-                  <p>Priority: ${task.priority}</p>
-                  <p>Status: ${task.status}</p>
-                </ion-label>
-                <ion-button slot="end" fill="clear" id="toggle-${task.id}">
-                  <ion-icon name="${task.status === 'pending' ? 'checkmark-circle-outline' : 'refresh-circle-outline'}"></ion-icon>
-                </ion-button>
-              `;
-              taskList.appendChild(item);
-              document.getElementById(`toggle-${task.id}`).addEventListener("click", () => toggleTaskStatus(task.id, task.status));
-            });
+            if (tasks.length === 0) {
+              taskList.innerHTML = `<ion-item><ion-label>未找到任務</ion-label></ion-item>`;
+            } else {
+              tasks.forEach((task) => {
+                const item = document.createElement("ion-item");
+                item.className = task.status === "completed" ? "completed" : "";
+                item.innerHTML = `
+                  <ion-avatar slot="start">
+                    <img src="/assets/user-${task.assignee_id || 'default'}.png" alt="${task.assignee_username || '無指派人'}" onerror="this.src='/assets/user-default.png'" />
+                  </ion-avatar>
+                  <ion-label>
+                    <h2>${task.title}</h2>
+                    <p>${task.description || "無描述"}</p>
+                    <p>指派人: ${task.assignee_username || "無"}</p>
+                    <p>到期日: ${task.due_date ? new Date(task.due_date).toLocaleDateString() : "無到期日"}</p>
+                    <p>優先級: ${task.priority === "low" ? "低" : task.priority === "medium" ? "中" : "高"}</p>
+                    <p>狀態: ${task.status === "pending" ? "待處理" : "已完成"}</p>
+                  </ion-label>
+                  <ion-button slot="end" fill="clear" id="toggle-${task.id}">
+                    <ion-icon name="${task.status === 'pending' ? 'checkmark-circle-outline' : 'refresh-circle-outline'}"></ion-icon>
+                  </ion-button>
+                `;
+                taskList.appendChild(item);
+                document.getElementById(`toggle-${task.id}`)?.addEventListener("click", () => toggleTaskStatus(task.id, task.status));
+              });
+            }
           } catch (error) {
-            console.error("Error rendering tasks:", error);
+            console.error("渲染任務錯誤:", error);
           }
         }
 
         async function toggleTaskStatus(taskId, currentStatus) {
           const newStatus = currentStatus === "pending" ? "completed" : "pending";
           try {
-            console.log(`Toggling task ${taskId} to ${newStatus}`);
+            console.log(`將任務 ${taskId} 切換為 ${newStatus}`);
             const response = await fetch(`http://localhost:8100/tasks/${taskId}`, {
               method: "PATCH",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: token,
+                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ status: newStatus }),
             });
             const data = await response.json();
-            console.log("Toggle task response:", data);
+            console.log("切換任務回應:", data);
             if (!response.ok) {
-              throw new Error(data.error || "Failed to update task");
+              throw new Error(data.error || "無法更新任務");
             }
-            renderTasks();
-            const toast = document.createElement("ion-toast");
-            toast.message = `Task marked as ${newStatus}`;
-            toast.duration = 2000;
-            toast.color = "success";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await showToast(`任務標記為${newStatus === "pending" ? "待處理" : "已完成"}`, 2000, "success");
+            await renderTasks();
           } catch (error) {
-            console.error("Error toggling task:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = "Failed to update task: " + error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            console.error("切換任務錯誤:", error);
+            await showToast(`無法更新任務: ${error.message}`, 2000, "danger");
           }
         }
 
-        renderTasks();
+        await renderTasks();
 
-        document.getElementById("task_form").addEventListener("submit", async (event) => {
+        taskForm?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const form = event.target;
           const formData = new FormData(form);
@@ -334,44 +358,29 @@
           const due_date = formData.get("due_date")?.toString();
           const priority = formData.get("priority")?.toString() || "medium";
 
-          // Client-side validation
+          // 客戶端驗證
           if (!title) {
-            const toast = document.createElement("ion-toast");
-            toast.message = "Task title is required";
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await showToast("任務標題為必填", 2000, "danger");
             return;
           }
           if (title.length > 100) {
-            const toast = document.createElement("ion-toast");
-            toast.message = "Task title must be 100 characters or less";
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await showToast("任務標題必須為100個字符或更少", 2000, "danger");
             return;
           }
           if (!["low", "medium", "high"].includes(priority)) {
-            const toast = document.createElement("ion-toast");
-            toast.message = "Invalid priority value";
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await showToast("無效的優先級值", 2000, "danger");
             return;
           }
 
-          console.log("Task form submitted:", { title, description, assignee_id, due_date, priority });
+          console.log("任務表單提交:", { title, description, assignee_id, due_date, priority });
 
           try {
-            console.log("Sending task creation request");
+            console.log("正在發送任務創建請求");
             const response = await fetch("http://localhost:8100/tasks", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: token,
+                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({
                 title,
@@ -382,45 +391,16 @@
               }),
             });
             const data = await response.json();
-            console.log("Task creation response:", data);
+            console.log("任務創建回應:", data);
             if (!response.ok) {
-              if (data.error === "User not in a family") {
-                console.log("User not in a family, showing toast");
-                const toast = document.createElement("ion-toast");
-                toast.message = "Please create or join a family first";
-                toast.duration = 3000;
-                toast.color = "warning";
-                toast.buttons = [
-                  {
-                    text: "Go to Family",
-                    handler: () => {
-                      console.log("Toast button clicked, redirecting to /family.html");
-                      window.location.href = "/family.html";
-                    },
-                  },
-                ];
-                document.body.appendChild(toast);
-                toast.present().catch((err) => console.error("Toast present error:", err));
-              }
-              throw new Error(data.error || "Failed to create task");
+              throw new Error(data.error || "無法創建任務");
             }
-            console.log("Task created, refetching tasks");
-            renderTasks();
-            const toast = document.createElement("ion-toast");
-            toast.message = "Task Created";
-            toast.duration = 2000;
-            toast.color = "success";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await showToast(`任務已創建 (ID: ${data.task_id})`, 2000, "success");
             form.reset();
+            await renderTasks();
           } catch (error) {
-            console.error("Error creating task:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = `Failed to create task: ${error.message || "Unknown server error"}`;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            console.error("創建任務錯誤:", error);
+            await showToast(`無法創建任務: ${error.message}`, 2000, "danger");
           }
         });
       });

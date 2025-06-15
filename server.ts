@@ -173,21 +173,10 @@ app.get('/', async (req: Request, res: Response) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; username: string };
-    const db = await initDb();
-    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [decoded.userId]);
-    if (!family) {
-      console.log(`User ${decoded.username} not in a family, serving family.html`);
-      return res.sendFile(path.join(__dirname, 'public', 'family.html'), (err) => {
-        if (err) {
-          console.error('Error serving family.html:', err);
-          sendResponse(res, 500, false, null, 'Failed to load page');
-        }
-      });
-    }
-    console.log(`User ${decoded.username} in family, serving index.html`);
-    res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+    console.log(`User ${decoded.username} authenticated, serving family.html`);
+    return res.sendFile(path.join(__dirname, 'public', 'family.html'), (err) => {
       if (err) {
-        console.error('Error serving index.html:', err);
+        console.error('Error serving family.html:', err);
         sendResponse(res, 500, false, null, 'Failed to load page');
       }
     });
@@ -474,7 +463,7 @@ app.post('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
   if (!title || !start_datetime) {
     return sendResponse(res, 400, false, null, 'Title and start date are required');
   }
-  if (title.length > 0) {
+  if (title.length > 100) {
     return sendResponse(res, 400, false, null, 'Title must be 100 characters or less');
   }
 
@@ -482,13 +471,13 @@ app.post('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
-      console.log('ユーザーが家族に属していません:', user_id);
-      return sendResponse(res, 403, false, null, 'ユーザーは家族に属していません');
+      console.log('User not in a family:', user_id);
+      return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
     const created_at = new Date().toISOString();
     const result = await db.run(
-      'INSERT INTO event (family_id, user_id, title, start_datetime, end_datetime, reminder_datetime, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO event (family_id, creator_id, title, start_datetime, end_datetime, reminder_datetime, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [family.family_id, user_id, title, start_datetime, end_datetime || null, reminder_datetime || null, created_at]
     );
     console.log('Event created:', { event_id: result.lastID, family_id: family.family_id });
@@ -506,20 +495,20 @@ app.get('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
-      console.log('家族が見つかりません:', user_id);
-      return sendResponse(res, 403, false, null, '家族に所属していません');
+      console.log('User not in a family:', user_id);
+      return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
     const tasks = await db.all(
-      'SELECT t.id, t.title, t.description, t.due_date, t.priority, t.status, t.created_id, t.assignee_id, u.username AS assignee_username' +
+      'SELECT t.id, t.title, t.description, t.due_date, t.priority, t.status, t.creator_id, t.assignee_id, u.username AS assignee_username' +
       ' FROM task t LEFT JOIN user u ON t.assignee_id = u.id WHERE t.family_id = ?',
       [family.family_id]
     );
-    console.log('タスクを取得しました:', { family_id: family.family_id, tasks });
+    console.log('Fetched tasks:', { family_id: family.family_id, tasks });
     sendResponse(res, 200, true, { tasks });
   } catch (error) {
-    console.error('タスク取得エラー:', error);
-    sendResponse(res, 500, false, null, 'サーバーエラー');
+    console.error('Fetch tasks error:', error);
+    sendResponse(res, 500, false, null, 'Server error');
   }
 });
 
@@ -529,24 +518,24 @@ app.post('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
   const { title, description, assignee_id, due_date, priority } = req.body;
 
   if (!title || title.length > 100) {
-    return sendResponse(res, 400, false, null, 'タイトルは必須で、100文字以下である必要があります');
+    return sendResponse(res, 400, false, null, 'Title is required and must be 100 characters or less');
   }
   if (priority && !['low', 'medium', 'high'].includes(priority)) {
-    return sendResponse(res, 400, false, null, '優先度はlow、medium、またはhighである必要があります');
+    return sendResponse(res, 400, false, null, 'Priority must be low, medium, or high');
   }
 
   try {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
-      console.log('ユーザーが家族に属していません:', user_id);
-      return sendResponse(res, 403, false, null, 'ユーザーは家族に属していません');
+      console.log('User not in a family:', user_id);
+      return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
     if (assignee_id) {
       const exists = await db.get('SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?', [family.family_id, assignee_id]);
       if (!exists) {
-        return sendResponse(res, 400, false, null, '割り当てられたユーザーはこの家族のメンバーではありません');
+        return sendResponse(res, 400, false, null, 'Assignee must be a family member');
       }
     }
 
@@ -555,11 +544,11 @@ app.post('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
       'INSERT INTO task (family_id, creator_id, assignee_id, title, description, due_date, priority, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [family.family_id, user_id, assignee_id || null, title, description || null, due_date || null, priority || 'medium', 'pending', created_at]
     );
-    console.log('タスクを作成しました:', { task_id: result.lastID, family_id: family.family_id });
-    sendResponse(res, 201, true, { message: 'タスクを作成しました', task_id: result.lastID });
+    console.log('Task created:', { task_id: result.lastID, family_id: family.family_id });
+    sendResponse(res, 201, true, { message: 'Task created', task_id: result.lastID });
   } catch (error) {
-    console.error('タスク作成エラー:', error);
-    sendResponse(res, 500, false, null, 'サーバーエラー');
+    console.error('Create task error:', error);
+    sendResponse(res, 500, false, null, 'Server error');
   }
 });
 
@@ -570,28 +559,28 @@ app.patch('/tasks/:id', authenticate, async (req: AuthRequest, res: Response) =>
   const { status } = req.body;
 
   if (!status || !['pending', 'completed'].includes(status)) {
-    return sendResponse(res, 400, false, null, 'ステータスはpendingまたはcompletedである必要があります');
+    return sendResponse(res, 400, false, null, 'Status must be pending or completed');
   }
 
   try {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
-      console.log('ユーザーが家族に属していません:', user_id);
-      return sendResponse(res, 403, false, null, 'ユーザーは家族に属していません');
+      console.log('User not in a family:', user_id);
+      return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
     const task = await db.get('SELECT id FROM task WHERE id = ? AND family_id = ?', [task_id, family.family_id]);
     if (!task) {
-      return sendResponse(res, 404, false, null, 'タスクが見つかりません');
+      return sendResponse(res, 404, false, null, 'Task not found');
     }
 
     await db.run('UPDATE task SET status = ? WHERE id = ?', [status, task_id]);
-    console.log('タスクのステータスを更新しました:', { task_id, status });
-    sendResponse(res, 200, true, { message: 'タスクのステータスを更新しました' });
+    console.log('Task status updated:', { task_id, status });
+    sendResponse(res, 200, true, { message: 'Task status updated' });
   } catch (error) {
-    console.error('タスク更新エラー:', error);
-    sendResponse(res, 500, false, null, 'サーバーエラー');
+    console.error('Update task error:', error);
+    sendResponse(res, 500, false, null, 'Server error');
   }
 });
 
@@ -602,8 +591,8 @@ app.get('/messages', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
-      console.log('家族が見つかりません:', user_id);
-      return sendResponse(res, 403, false, null, 'ユーザーは家族に属していません');
+      console.log('User not in a family:', user_id);
+      return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
     const messages = await db.all(
@@ -611,11 +600,11 @@ app.get('/messages', authenticate, async (req: AuthRequest, res: Response) => {
       'FROM message m JOIN user u ON m.sender_id = u.id WHERE m.family_id = ? ORDER BY m.sent_at ASC',
       [family.family_id]
     );
-    console.log('メッセージを取得しました:', { family_id: family.family_id, messages });
+    console.log('Fetched messages:', { family_id: family.family_id, messages });
     sendResponse(res, 200, true, { messages });
   } catch (error) {
-    console.error('メッセージ取得エラー:', error);
-    sendResponse(res, 500, false, null, 'サーバーエラー');
+    console.error('Fetch messages error:', error);
+    sendResponse(res, 500, false, null, 'Server error');
   }
 });
 
@@ -625,15 +614,15 @@ app.post('/messages', authenticate, async (req: AuthRequest, res: Response) => {
   const { content } = req.body;
 
   if (!content || content.length > 1000) {
-    return sendResponse(res, 400, false, null, 'メッセージ内容は必須で、1000文字以下である必要があります');
+    return sendResponse(res, 400, false, null, 'Content is required and must be 1000 characters or less');
   }
 
   try {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
-      console.log('ユーザーが家族に属していません:', user_id);
-      return sendResponse(res, 403, false, null, 'ユーザーは家族に属していません');
+      console.log('User not in a family:', user_id);
+      return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
     const sent_at = new Date().toISOString();
@@ -641,11 +630,11 @@ app.post('/messages', authenticate, async (req: AuthRequest, res: Response) => {
       'INSERT INTO message (family_id, sender_id, content, sent_at) VALUES (?, ?, ?, ?)',
       [family.family_id, user_id, content, sent_at]
     );
-    console.log('メッセージを送信しました:', { message_id: result.lastID, family_id: family.family_id });
-    sendResponse(res, 201, true, { message: 'メッセージを送信しました', message_id: result.lastID });
+    console.log('Message sent:', { message_id: result.lastID, family_id: family.family_id });
+    sendResponse(res, 201, true, { message: 'Message sent', message_id: result.lastID });
   } catch (error) {
-    console.error('メッセージ作成エラー:', error);
-    sendResponse(res, 500, false, null, 'サーバーエラー');
+    console.error('Create message error:', error);
+    sendResponse(res, 500, false, null, 'Server error');
   }
 });
 
