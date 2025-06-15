@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>S&S Family App - Login</title>
-    <script type="module" src="/ionic/ionic.esm.js"></script>
-    <script nomodule src="/ionic/ionic.js"></script>
-    <link rel="stylesheet" href="/ionic/ionic.bundle.min.css" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/css/ionic.bundle.min.css" />
     <link rel="stylesheet" href="/styles.css" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
   </head>
@@ -23,12 +23,12 @@
               <ion-list>
                 <ion-item>
                   <ion-label position="floating">Username</ion-label>
-                  <ion-input id="username" type="text" required></ion-input>
+                  <ion-input id="username" name="username" type="text" required></ion-input>
                   <div id="username_error" class="error" hidden>Username must be 3-32 characters</div>
                 </ion-item>
                 <ion-item>
                   <ion-label position="floating">Password</ion-label>
-                  <ion-input id="password" type="password" required></ion-input>
+                  <ion-input id="password" name="password" type="password" required></ion-input>
                   <div id="password_error" class="error" hidden>Password must be at least 6 characters</div>
                   <ion-icon id="togglePassword" name="eye-outline" slot="end"></ion-icon>
                 </ion-item>
