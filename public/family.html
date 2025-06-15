@@ -237,8 +237,9 @@
                 item.innerHTML = `
                   <ion-label>
                     <h2>${family.name}</h2>
+                    <p>個人名稱: ${family.username || '未知用戶'}</p>
                     <p>ID: ${family.id} | 角色: ${family.role || '擁有者'}</p>
-                    <p>成員: ${members.length > 0 ? members.map(m => m.username).join(', ') : '未找到成員'}</p>
+                    <p>家庭成員: ${members.length > 0 ? members.map(m => m.username).join(', ') : '未找到成員'}</p>
                   </ion-label>
                 `;
                 familyList.appendChild(item);

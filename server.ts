@@ -386,9 +386,10 @@ app.get('/my-families', authenticate, async (req: AuthRequest, res: Response) =>
   try {
     const db = await initDb();
     const families = await db.all(
-      `SELECT DISTINCT f.id, f.name, f.owner_id, fm.role 
+      `SELECT DISTINCT f.id, f.name, f.owner_id, fm.role, u.username
        FROM family f 
        LEFT JOIN family_member fm ON f.id = fm.family_id 
+       JOIN user u ON fm.user_id = u.id
        WHERE f.owner_id = ? OR fm.user_id = ?`,
       [user_id, user_id]
     );
