@@ -27,6 +27,7 @@
     "listening-on": "^2.0.9",
     "multer": "^1.4.5-lts.1",
     "reflect-metadata": "^0.2.2",
+    "sqlite3": "^5.1.7",
     "typeorm": "^0.3.24"
   },
   "devDependencies": {
