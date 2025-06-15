@@ -14,11 +14,11 @@ dotenv.config();
 
 const app: Application = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8100;
-const JWT_SECRET = process.env.JWT_SECRET; // 移除後備值
+const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
   console.error('Error: JWT_SECRET is not defined in .env');
-  process.exit(1); // 退出以強制配置
+  process.exit(1);
 }
 
 console.log(`JWT_SECRET loaded (length: ${JWT_SECRET.length})`);
@@ -29,7 +29,7 @@ interface AuthRequest extends Request {
 }
 
 // Middleware
-app.use(morgan('dev')); // Request logging
+app.use(morgan('dev'));
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
@@ -152,13 +152,52 @@ app.get('/health', async (req: Request, res: Response) => {
 });
 
 // Root route
-app.get('/', (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
-    if (err) {
-      console.error('Error serving index.html:', err);
-      sendResponse(res, 500, false, null, 'Failed to load page');
+app.get('/', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 未登錄，返回 login.html
+    console.log('No token provided, serving login.html');
+    return res.sendFile(path.join(__dirname, 'public', 'login.html'), (err) => {
+      if (err) {
+        console.error('Error serving login.html:', err);
+        sendResponse(res, 500, false, null, 'Failed to load page');
+      }
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; username: string };
+    const db = await initDb();
+    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [decoded.userId]);
+    if (!family) {
+      // 已登錄但未加入家庭，返回 family.html
+      console.log(`User ${decoded.username} not in a family, serving family.html`);
+      return res.sendFile(path.join(__dirname, 'public', 'family.html'), (err) => {
+        if (err) {
+          console.error('Error serving family.html:', err);
+          sendResponse(res, 500, false, null, 'Failed to load page');
+        }
+      });
     }
-  });
+    // 已登錄且在家庭中，返回 index.html
+    console.log(`User ${decoded.username} in family, serving index.html`);
+    res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err);
+        sendResponse(res, 500, false, null, 'Failed to load page');
+      }
+    });
+  } catch (error) {
+    // token 無效，返回 login.html
+    console.error('Token verification error, serving login.html:', error);
+    res.sendFile(path.join(__dirname, 'public', 'login.html'), (err) => {
+      if (err) {
+        console.error('Error serving login.html:', err);
+        sendResponse(res, 500, false, null, 'Failed to load page');
+      }
+    });
+  }
 });
 
 // Register
@@ -218,7 +257,7 @@ app.post('/login', async (req: Request, res: Response) => {
     }
     const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
     console.log('Login successful:', { user_id: user.id });
-    sendResponse(res, 200, true, { token, message: 'Login successful' }); // 使用 data.token
+    sendResponse(res, 200, true, { token, message: 'Login successful' });
   } catch (error) {
     console.error('Login error:', error);
     sendResponse(res, 500, false, null, 'Server error');
