@@ -1,338 +1,211 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>S&S Family App - Chat</title>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.esm.js"></script>
-    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/css/ionic.bundle.min.css" />
-    <link rel="stylesheet" href="/styles.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-    <style>
-      #chat_list {
-        max-height: 400px;
-        overflow-y: auto;
-        padding: 16px;
-      }
-      .message {
-        margin-bottom: 12px;
-        padding: 12px;
-        border-radius: 12px;
-        box-shadow: var(--shadow);
-      }
-      .message.sent {
-        background: var(--primary-pink);
-        color: var(--text-dark);
-        margin-left: 20%;
-      }
-      .message.received {
-        background: var(--light-pink);
-        margin-right: 20%;
-      }
-      ion-avatar {
-        width: 32px;
-        height: 32px;
-        margin-right: 8px;
-      }
-    </style>
-  </head>
-  <body>
-    <ion-app>
-      <ion-menu content-id="main-content" side="start">
-        <ion-header>
-          <ion-toolbar>
-            <ion-title>Menu</ion-title>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content>
-          <ion-list>
-            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
-            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
-            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
-            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
-            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
-            <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>Sign Out</ion-item>
-          </ion-list>
-        </ion-content>
-      </ion-menu>
-      <div class="ion-page" id="main-content">
-        <ion-header>
-          <ion-toolbar>
-            <ion-buttons slot="start">
-              <ion-menu-button></ion-menu-button>
-            </ion-buttons>
-            <ion-title>S&S Family App</ion-title>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content class="ion-padding">
-          <img src="/assets/family-logo.png" alt="Family Logo" class="family-logo" />
-          <div class="welcome-message">
-            <h2>Family Chat</h2>
-            <p>Stay connected with your loved ones.</p>
-          </div>
-          <ion-card>
-            <ion-card-header>
-              <ion-card-title>Send Message</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <form id="message_form" class="ion-padding">
-                <ion-grid>
-                  <ion-row>
-                    <ion-col>
-                      <ion-item>
-                        <ion-label position="stacked">Message</ion-label>
-                        <ion-textarea
-                          name="content"
-                          id="content"
-                          placeholder="Type your message"
-                          required
-                        ></ion-textarea>
-                      </ion-item>
-                    </ion-col>
-                  </ion-row>
-                  <ion-row>
-                    <ion-col>
-                      <ion-button expand="block" type="submit">Send</ion-button>
-                    </ion-col>
-                  </ion-row>
-                </ion-grid>
-              </form>
-            </ion-card-content>
-          </ion-card>
-          <ion-list id="chat_list"></ion-list>
-        </ion-content>
-        <ion-footer>
-          <ion-toolbar>
-            <ion-title size="small" class="ion-text-center">
-              © 2025 S&S Family App. All rights reserved.
-            </ion-title>
-          </ion-toolbar>
-        </ion-footer>
-      </div>
-    </ion-app>
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    console.log("DOM loaded for chat.html");
+    console.log("Ionic version:", window.Ionic?.version || "Not loaded");
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.log("No token found, redirecting to /login.html");
+      window.location.href = "/login.html";
+      return;
+    }
+    console.log("Token found:", token);
 
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        console.log("DOM loaded for chat.html");
-        console.log("Ionic version:", window.Ionic?.version || "Not loaded");
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
-        if (!token) {
-          console.log("No token found, redirecting to /login.html");
-          window.location.href = "/login.html";
-          return;
-        }
-        console.log("Token found:", token);
-
-        // Menu navigation
-        const navItems = {
-          "nav-dashboard": "/index.html",
-          "nav-calendar": "/calendar.html",
-          "nav-tasks": "/tasks.html",
-          "nav-chat": "/chat.html",
-          "nav-family": "/family.html",
-        };
-        Object.keys(navItems).forEach((id) => {
-          const item = document.getElementById(id);
-          item.addEventListener("click", () => {
-            const url = navItems[id];
-            console.log(`Navigating to ${url}`);
-            window.location.href = url;
-          });
-        });
-
-        // Sign out
-        document.getElementById("signOut").addEventListener("click", async () => {
-          console.log("Sign out clicked");
-          try {
-            await fetch(`http://localhost:8100/logout?token=${encodeURIComponent(token)}`, {
-              method: "GET",
-            });
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            console.log("Logged out, cleared token");
-            window.location.href = "/login.html";
-          } catch (err) {
-            console.error("Error during sign out:", err);
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            window.location.href = "/login.html";
-          }
-        });
-
-        const chatList = document.getElementById("chat_list");
-
-        async function fetchUser() {
-          try {
-            console.log("Fetching user info");
-            const response = await fetch("http://localhost:8100/user", {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-            });
-            const data = await response.json();
-            console.log("Fetch user response:", data);
-            if (!response.ok) {
-              throw new Error(data.error || "Failed to fetch user data");
-            }
-            return {
-              username: data.username || "Guest",
-              email: data.email || "No email",
-              user_id: data.user_id,
-            };
-          } catch (err) {
-            console.error("Error fetching user:", err);
-            return { username: "Guest", email: "Not logged in", user_id: null };
-          }
-        }
-
-        async function fetchMessages() {
-          try {
-            console.log("Fetching messages");
-            const response = await fetch("http://localhost:8100/messages", {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-            });
-            const data = await response.json();
-            console.log("Fetch messages response:", data);
-            if (!response.ok) {
-              if (data.error === "User not in a family") {
-                console.log("User not in a family, showing toast");
-                const toast = document.createElement("ion-toast");
-                toast.message = "Please create or join a family first";
-                toast.duration = 3000;
-                toast.color = "warning";
-                toast.buttons = [
-                  {
-                    text: "Go to Family",
-                    handler: () => {
-                      console.log("Toast button clicked, redirecting to /family.html");
-                      window.location.href = "/family.html";
-                    },
-                  },
-                ];
-                document.body.appendChild(toast);
-                toast.present().catch((err) => console.error("Toast present error:", err));
-              }
-              throw new Error(data.error || "Failed to fetch messages");
-            }
-            return data.messages;
-          } catch (error) {
-            console.error("Error fetching messages:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = "Failed to load messages: " + error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-            return [];
-          }
-        }
-
-        async function renderMessages() {
-          try {
-            const messages = await fetchMessages();
-            const user = await fetchUser();
-            chatList.innerHTML = "";
-            messages.forEach(message => {
-              const div = document.createElement("div");
-              div.className = `message ${message.sender_id === user.user_id ? 'sent' : 'received'}`;
-              div.innerHTML = `
-                <ion-avatar slot="start">
-                  <img src="/assets/user-${message.sender_id}.png" alt="${message.sender_username}" onerror="this.src='/assets/user-default.png'" />
-                </ion-avatar>
-                <strong>${message.sender_username}</strong> (${new Date(message.sent_at).toLocaleString()}):
-                <p>${message.content}</p>
-              `;
-              chatList.appendChild(div);
-            });
-            chatList.scrollTop = chatList.scrollHeight;
-          } catch (error) {
-            console.error("Error rendering messages:", error);
-          }
-        }
-
-        renderMessages();
-        setInterval(renderMessages, 5000);
-
-        document.getElementById("message_form").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const form = event.target;
-          const formData = new FormData(form);
-          const content = formData.get("content");
-          console.log("Message form submitted:", { content });
-
-          if (!content) {
-            console.log("Missing message content");
-            const toast = document.createElement("ion-toast");
-            toast.message = "Message content is required";
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-            return;
-          }
-
-          try {
-            console.log("Sending message creation request");
-            const response = await fetch("http://localhost:8100/messages", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-              body: JSON.stringify({ content }),
-            });
-            const data = await response.json();
-            console.log("Message creation response:", data);
-            if (!response.ok) {
-              if (data.error === "User not in a family") {
-                console.log("User not in a family, showing toast");
-                const toast = document.createElement("ion-toast");
-                toast.message = "Please create or join a family first";
-                toast.duration = 3000;
-                toast.color = "warning";
-                toast.buttons = [
-                  {
-                    text: "Go to Family",
-                    handler: () => {
-                      console.log("Toast button clicked, redirecting to /family.html");
-                      window.location.href = "/family.html";
-                    },
-                  },
-                ];
-                document.body.appendChild(toast);
-                toast.present().catch((err) => console.error("Toast present error:", err));
-              } else {
-                throw new Error(data.error || "Failed to send message");
-              }
-            } else {
-              console.log("Message sent, refetching messages");
-              renderMessages();
-              const toast = document.createElement("ion-toast");
-              toast.message = "Message Sent";
-              toast.duration = 2000;
-              toast.color = "success";
-              document.body.appendChild(toast);
-              toast.present().catch((err) => console.error("Toast present error:", err));
-              form.reset();
-            }
-          } catch (error) {
-            console.error("Error sending message:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = "Failed to send message: " + error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-          }
-        });
+    // Menu navigation
+    const navItems = {
+      "nav-dashboard": "/index.html",
+      "nav-calendar": "/calendar.html",
+      "nav-tasks": "/tasks.html",
+      "nav-chat": "/chat.html",
+      "nav-family": "/family.html",
+    };
+    Object.keys(navItems).forEach((id) => {
+      const item = document.getElementById(id);
+      item?.addEventListener("click", () => {
+        const url = navItems[id];
+        console.log(`Navigating to ${url}`);
+        window.location.href = url;
       });
-    </script>
-  </body>
-</html>
+    });
+
+    // Sign out
+    document.getElementById("signOut")?.addEventListener("click", () => {
+      console.log("Sign out clicked");
+      localStorage.removeItem("token");
+      console.log("Logged out, cleared token");
+      window.location.href = "/login.html";
+    });
+
+    const chatList = document.getElementById("chat_list");
+
+    async function fetchUser() {
+      try {
+        console.log("Fetching user info");
+        const response = await fetch("http://localhost:8100/user", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        console.log("Fetch user response:", data);
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch user data");
+        }
+        return {
+          username: data.username || "Guest",
+          email: data.email || "No email",
+          user_id: data.user_id,
+        };
+      } catch (err) {
+        console.error("Error fetching user:", err);
+        return { username: "Guest", email: "Not logged in", user_id: null };
+      }
+    }
+
+    async function fetchMessages() {
+      try {
+        console.log("Fetching messages");
+        const response = await fetch("http://localhost:8100/messages", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        console.log("Fetch messages response:", data);
+        if (!response.ok) {
+          if (data.error === "User not in a family") {
+            console.log("User not in a family, showing toast");
+            const toast = document.createElement("ion-toast");
+            toast.message = "Please create or join a family first";
+            toast.duration = 3000;
+            toast.color = "warning";
+            toast.buttons = [
+              {
+                text: "Go to Family",
+                handler: () => {
+                  console.log("Toast button clicked, redirecting to /family.html");
+                  window.location.href = "/family.html";
+                },
+              },
+            ];
+            document.body.appendChild(toast);
+            await toast.present();
+          }
+          throw new Error(data.error || "Failed to fetch messages");
+        }
+        return data.messages;
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+        const toast = document.createElement("ion-toast");
+        toast.message = `Failed to load messages: ${error.message}`;
+        toast.duration = 2000;
+        toast.color = "danger";
+        document.body.appendChild(toast);
+        await toast.present();
+        return [];
+      }
+    }
+
+    async function renderMessages() {
+      try {
+        const messages = await fetchMessages();
+        const user = await fetchUser();
+        chatList.innerHTML = "";
+        messages.forEach((message) => {
+          const div = document.createElement("div");
+          div.className = `message ${message.sender_id === user.user_id ? "sent" : "received"}`;
+          div.innerHTML = `
+            <ion-avatar slot="start">
+              <img src="/assets/user-${message.sender_id}.png" alt="${message.sender_username}" onerror="this.src='/assets/user-default.png'" />
+            </ion-avatar>
+            <strong>${message.sender_username}</strong> (${new Date(message.sent_at).toLocaleString()}):
+            <p>${message.content}</p>
+          `;
+          chatList.appendChild(div);
+        });
+        chatList.scrollTop = chatList.scrollHeight;
+      } catch (error) {
+        console.error("Error rendering messages:", error);
+      }
+    }
+
+    await renderMessages();
+    setInterval(renderMessages, 5000);
+
+    document.getElementById("message_form")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      const content = formData.get("content")?.toString().trim();
+      console.log("Message form submitted:", { content });
+
+      if (!content) {
+        console.log("Missing message content");
+        const toast = document.createElement("ion-toast");
+        toast.message = "Message content is required";
+        toast.duration = 2000;
+        toast.color = "danger";
+        document.body.appendChild(toast);
+        await toast.present();
+        return;
+      }
+
+      try {
+        console.log("Sending message creation request");
+        const response = await fetch("http://localhost:8100/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ content }),
+        });
+        const data = await response.json();
+        console.log("Message creation response:", data);
+        if (!response.ok) {
+          if (data.error === "User not in a family") {
+            console.log("User not in a family, showing toast");
+            const toast = document.createElement("ion-toast");
+            toast.message = "Please create or join a family first";
+            toast.duration = 3000;
+            toast.color = "warning";
+            toast.buttons = [
+              {
+                text: "Go to Family",
+                handler: () => {
+                  console.log("Toast button clicked, redirecting to /family.html");
+                  window.location.href = "/family.html";
+                },
+              },
+            ];
+            document.body.appendChild(toast);
+            await toast.present();
+          } else {
+            throw new Error(data.error || "Failed to send message");
+          }
+        } else {
+          console.log("Message sent, refetching messages");
+          await renderMessages();
+          const toast = document.createElement("ion-toast");
+          toast.message = "Message Sent";
+          toast.duration = 2000;
+          toast.color = "success";
+          document.body.appendChild(toast);
+          await toast.present();
+          form.reset();
+        }
+      } catch (error) {
+        console.error("Error sending message:", error);
+        const toast = document.createElement("ion-toast");
+        toast.message = `Failed to send message: ${error.message}`;
+        toast.duration = 2000;
+        toast.color = "danger";
+        document.body.appendChild(toast);
+        await toast.present();
+      }
+    });
+  });
+</script>

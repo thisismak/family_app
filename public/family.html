@@ -135,10 +135,10 @@
     </ion-app>
 
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
+      document.addEventListener("DOMContentLoaded", async () => {
         console.log("DOM loaded for family.html");
         console.log("Ionic version:", window.Ionic?.version || "Not loaded");
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        const token = localStorage.getItem("token");
         if (!token) {
           console.log("No token found, redirecting to /login.html");
           window.location.href = "/login.html";
@@ -156,7 +156,7 @@
         };
         Object.keys(navItems).forEach((id) => {
           const item = document.getElementById(id);
-          item.addEventListener("click", () => {
+          item?.addEventListener("click", () => {
             const url = navItems[id];
             console.log(`Navigating to ${url}`);
             window.location.href = url;
@@ -164,22 +164,11 @@
         });
 
         // Sign out
-        document.getElementById("signOut").addEventListener("click", async () => {
+        document.getElementById("signOut")?.addEventListener("click", () => {
           console.log("Sign out clicked");
-          try {
-            await fetch(`http://localhost:8100/logout?token=${encodeURIComponent(token)}`, {
-              method: "GET",
-            });
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            console.log("Logged out, cleared token");
-            window.location.href = "/login.html";
-          } catch (err) {
-            console.error("Error during sign out:", err);
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            window.location.href = "/login.html";
-          }
+          localStorage.removeItem("token");
+          console.log("Logged out, cleared token");
+          window.location.href = "/login.html";
         });
 
         async function fetchFamilies() {
@@ -189,7 +178,7 @@
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: token,
+                Authorization: `Bearer ${token}`,
               },
             });
             const data = await response.json();
@@ -205,7 +194,6 @@
               familyList.innerHTML = `<ion-item><ion-label>No families found</ion-label></ion-item>`;
             } else {
               for (const family of data.families) {
-                // Fetch members for each family
                 let members = [];
                 try {
                   console.log(`Fetching members for family ID: ${family.id}`);
@@ -213,7 +201,7 @@
                     method: "GET",
                     headers: {
                       "Content-Type": "application/json",
-                      Authorization: token,
+                      Authorization: `Bearer ${token}`,
                     },
                   });
                   const memberData = await memberResponse.json();
@@ -245,13 +233,13 @@
             toast.duration = 2000;
             toast.color = "danger";
             document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await toast.present();
           }
         }
 
-        fetchFamilies();
+        await fetchFamilies();
 
-        document.getElementById("create_family_form").addEventListener("submit", async (event) => {
+        document.getElementById("create_family_form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const form = event.target;
           const formData = new FormData(form);
@@ -263,7 +251,7 @@
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: token,
+                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ name }),
             });
@@ -277,9 +265,9 @@
             toast.duration = 2000;
             toast.color = "success";
             document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await toast.present();
             form.reset();
-            fetchFamilies();
+            await fetchFamilies();
             setTimeout(() => {
               console.log("Redirecting to /calendar.html");
               window.location.href = "/calendar.html";
@@ -291,11 +279,11 @@
             toast.duration = 2000;
             toast.color = "danger";
             document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await toast.present();
           }
         });
 
-        document.getElementById("join_family_form").addEventListener("submit", async (event) => {
+        document.getElementById("join_family_form")?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const form = event.target;
           const formData = new FormData(form);
@@ -307,7 +295,7 @@
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: token,
+                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ family_id }),
             });
@@ -321,9 +309,9 @@
             toast.duration = 2000;
             toast.color = "success";
             document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await toast.present();
             form.reset();
-            fetchFamilies();
+            await fetchFamilies();
             setTimeout(() => {
               console.log("Redirecting to /calendar.html");
               window.location.href = "/calendar.html";
@@ -335,7 +323,7 @@
             toast.duration = 2000;
             toast.color = "danger";
             document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
+            await toast.present();
           }
         });
       });

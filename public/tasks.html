@@ -1,429 +1,298 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>S&S Family App - Tasks</title>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.esm.js"></script>
-    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/dist/ionic/ionic.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.8.0/css/ionic.bundle.min.css" />
-    <link rel="stylesheet" href="/styles.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-    <style>
-      ion-item.completed {
-        --background: var(--light-pink);
-        opacity: 0.8;
-      }
-      ion-avatar {
-        width: 40px;
-        height: 40px;
-        margin-right: 8px;
-      }
-    </style>
-  </head>
-  <body>
-    <ion-app>
-      <ion-menu content-id="main-content" side="start">
-        <ion-header>
-          <ion-toolbar>
-            <ion-title>Menu</ion-title>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content>
-          <ion-list>
-            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>Dashboard</ion-item>
-            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>Calendar</ion-item>
-            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>Tasks</ion-item>
-            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>Chat</ion-item>
-            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>Family</ion-item>
-            <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>Sign Out</ion-item>
-          </ion-list>
-        </ion-content>
-      </ion-menu>
-      <div class="ion-page" id="main-content">
-        <ion-header>
-          <ion-toolbar>
-            <ion-buttons slot="start">
-              <ion-menu-button></ion-menu-button>
-            </ion-buttons>
-            <ion-title>S&S Family App</ion-title>
-          </ion-toolbar>
-        </ion-header>
-        <ion-content class="ion-padding">
-          <img src="/assets/family-logo.png" alt="Family Logo" class="family-logo" />
-          <div class="welcome-message">
-            <h2>Family Tasks</h2>
-            <p>Keep your family organized with shared tasks.</p>
-          </div>
-          <ion-card>
-            <ion-card-header>
-              <ion-card-title>Add Task</ion-card-title>
-            </ion-card-header>
-            <ion-card-content>
-              <form id="task_form" class="ion-padding">
-                <ion-grid>
-                  <ion-row>
-                    <ion-col>
-                      <ion-item>
-                        <ion-label position="stacked">Task Title</ion-label>
-                        <ion-input
-                          type="text"
-                          name="title"
-                          id="title"
-                          placeholder="Enter task title"
-                          required
-                        ></ion-input>
-                      </ion-item>
-                    </ion-col>
-                  </ion-row>
-                  <ion-row>
-                    <ion-col>
-                      <ion-item>
-                        <ion-label position="stacked">Description (Optional)</ion-label>
-                        <ion-textarea
-                          name="description"
-                          id="description"
-                          placeholder="Enter task description"
-                        ></ion-textarea>
-                      </ion-item>
-                    </ion-col>
-                  </ion-row>
-                  <ion-row>
-                    <ion-col size="12" size-md="6">
-                      <ion-item>
-                        <ion-label position="stacked">Assignee (Optional)</ion-label>
-                        <ion-select name="assignee_id" id="assignee_id" placeholder="Select family member"></ion-select>
-                      </ion-item>
-                    </ion-col>
-                    <ion-col size="12" size-md="6">
-                      <ion-item>
-                        <ion-label position="stacked">Due Date (Optional)</ion-label>
-                        <ion-datetime
-                          name="due_date"
-                          id="due_date"
-                          display-format="YYYY-MM-DD"
-                        ></ion-datetime>
-                      </ion-item>
-                    </ion-col>
-                  </ion-row>
-                  <ion-row>
-                    <ion-col>
-                      <ion-item>
-                        <ion-label position="stacked">Priority</ion-label>
-                        <ion-select name="priority" id="priority" value="medium">
-                          <ion-select-option value="low">Low</ion-select-option>
-                          <ion-select-option value="medium">Medium</ion-select-option>
-                          <ion-select-option value="high">High</ion-select-option>
-                        </ion-select>
-                      </ion-item>
-                    </ion-col>
-                  </ion-row>
-                  <ion-row>
-                    <ion-col>
-                      <ion-button expand="block" type="submit">Add Task</ion-button>
-                    </ion-col>
-                  </ion-row>
-                </ion-grid>
-              </form>
-            </ion-card-content>
-          </ion-card>
-          <ion-list id="task_list"></ion-list>
-        </ion-content>
-        <ion-footer>
-          <ion-toolbar>
-            <ion-title size="small" class="ion-text-center">
-              © 2025 S&S Family App. All rights reserved.
-            </ion-title>
-          </ion-toolbar>
-        </ion-footer>
-      </div>
-    </ion-app>
+<script>
+  document.addEventListener("DOMContentLoaded", async () => {
+    console.log("DOM loaded for tasks.html");
+    console.log("Ionic version:", window.Ionic?.version || "Not loaded");
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.log("No token found, redirecting to /login.html");
+      window.location.href = "/login.html";
+      return;
+    }
+    console.log("Token found:", token);
 
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        console.log("DOM loaded for tasks.html");
-        console.log("Ionic version:", window.Ionic?.version || "Not loaded");
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
-        if (!token) {
-          console.log("No token found, redirecting to /login.html");
-          window.location.href = "/login.html";
-          return;
-        }
-        console.log("Token found:", token);
-
-        // Menu navigation
-        const navItems = {
-          "nav-dashboard": "/index.html",
-          "nav-calendar": "/calendar.html",
-          "nav-tasks": "/tasks.html",
-          "nav-chat": "/chat.html",
-          "nav-family": "/family.html",
-        };
-        Object.keys(navItems).forEach((id) => {
-          const item = document.getElementById(id);
-          item.addEventListener("click", () => {
-            const url = navItems[id];
-            console.log(`Navigating to ${url}`);
-            window.location.href = url;
-          });
-        });
-
-        // Sign out
-        document.getElementById("signOut").addEventListener("click", async () => {
-          console.log("Sign out clicked");
-          try {
-            await fetch(`http://localhost:8100/logout?token=${encodeURIComponent(token)}`, {
-              method: "GET",
-            });
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            console.log("Logged out, cleared token");
-            window.location.href = "/login.html";
-          } catch (err) {
-            console.error("Error during sign out:", err);
-            localStorage.removeItem("token");
-            sessionStorage.removeItem("token");
-            window.location.href = "/login.html";
-          }
-        });
-
-        const taskList = document.getElementById("task_list");
-        const assigneeSelect = document.getElementById("assignee_id");
-
-        async function fetchFamilyMembers() {
-          try {
-            console.log("Fetching tasks");
-            const response = await fetch("http://localhost:8100/tasks", {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-            });
-            const data = await response.json();
-            console.log("Fetch tasks response:", data);
-            if (!response.ok) {
-              if (data.error === "User not in a family") {
-                console.log("User not in a family, showing toast");
-                const toast = document.createElement("ion-toast");
-                toast.message = "Please create or join a family first";
-                toast.duration = 3000;
-                toast.color = "warning";
-                toast.buttons = [
-                  {
-                    text: "Go to Family",
-                    handler: () => {
-                      console.log("Toast button clicked, redirecting to /family.html");
-                      window.location.href = "/family.html";
-                    },
-                  },
-                ];
-                document.body.appendChild(toast);
-                toast.present().catch((err) => console.error("Toast present error:", err));
-              }
-              throw new Error(data.error || "Failed to fetch tasks");
-            }
-            console.log("Fetching family members");
-            const familyResponse = await fetch("http://localhost:8100/family/members", {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-            });
-            const familyData = await familyResponse.json();
-            console.log("Fetch family members response:", familyData);
-            if (!familyResponse.ok) {
-              throw new Error(familyData.error || "Failed to fetch family members");
-            }
-            assigneeSelect.innerHTML = '<ion-select-option value="">None</ion-select-option>';
-            familyData.members.forEach(member => {
-              const option = document.createElement("ion-select-option");
-              option.value = member.user_id;
-              option.textContent = member.username;
-              assigneeSelect.appendChild(option);
-            });
-            return data.tasks;
-          } catch (error) {
-            console.error("Error fetching family members or tasks:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = "Failed to load tasks: " + error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-            return [];
-          }
-        }
-
-        async function renderTasks() {
-          try {
-            const tasks = await fetchFamilyMembers();
-            taskList.innerHTML = "";
-            tasks.forEach(task => {
-              const item = document.createElement("ion-item");
-              item.className = task.status === "completed" ? "completed" : "";
-              item.innerHTML = `
-                <ion-avatar slot="start">
-                  <img src="/assets/user-${task.assignee_id || 'default'}.png" alt="${task.assignee_username || 'No assignee'}" onerror="this.src='/assets/user-default.png'" />
-                </ion-avatar>
-                <ion-label>
-                  <h2>${task.title}</h2>
-                  <p>${task.description || "No description"}</p>
-                  <p>Assignee: ${task.assignee_username || "None"}</p>
-                  <p>Due: ${task.due_date ? new Date(task.due_date).toLocaleDateString() : "No due date"}</p>
-                  <p>Priority: ${task.priority}</p>
-                  <p>Status: ${task.status}</p>
-                </ion-label>
-                <ion-button slot="end" fill="clear" id="toggle-${task.id}">
-                  <ion-icon name="${task.status === 'pending' ? 'checkmark-circle-outline' : 'refresh-circle-outline'}"></ion-icon>
-                </ion-button>
-              `;
-              taskList.appendChild(item);
-              document.getElementById(`toggle-${task.id}`).addEventListener("click", () => toggleTaskStatus(task.id, task.status));
-            });
-          } catch (error) {
-            console.error("Error rendering tasks:", error);
-          }
-        }
-
-        async function toggleTaskStatus(taskId, currentStatus) {
-          const newStatus = currentStatus === "pending" ? "completed" : "pending";
-          try {
-            console.log(`Toggling task ${taskId} to ${newStatus}`);
-            const response = await fetch(`http://localhost:8100/tasks/${taskId}`, {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-              body: JSON.stringify({ status: newStatus }),
-            });
-            const data = await response.json();
-            console.log("Toggle task response:", data);
-            if (!response.ok) {
-              throw new Error(data.error || "Failed to update task");
-            }
-            renderTasks();
-            const toast = document.createElement("ion-toast");
-            toast.message = `Task marked as ${newStatus}`;
-            toast.duration = 2000;
-            toast.color = "success";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-          } catch (error) {
-            console.error("Error toggling task:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = "Failed to update task: " + error.message;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-          }
-        }
-
-        renderTasks();
-
-        document.getElementById("task_form").addEventListener("submit", async (event) => {
-          event.preventDefault();
-          const form = event.target;
-          const formData = new FormData(form);
-          const title = formData.get("title")?.toString().trim();
-          const description = formData.get("description")?.toString().trim() || null;
-          const assignee_id = formData.get("assignee_id") || null;
-          const due_date = formData.get("due_date")?.toString();
-          const priority = formData.get("priority")?.toString() || "medium";
-
-          // Client-side validation
-          if (!title) {
-            const toast = document.createElement("ion-toast");
-            toast.message = "Task title is required";
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-            return;
-          }
-          if (title.length > 100) {
-            const toast = document.createElement("ion-toast");
-            toast.message = "Task title must be 100 characters or less";
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-            return;
-          }
-          if (!["low", "medium", "high"].includes(priority)) {
-            const toast = document.createElement("ion-toast");
-            toast.message = "Invalid priority value";
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-            return;
-          }
-
-          console.log("Task form submitted:", { title, description, assignee_id, due_date, priority });
-
-          try {
-            console.log("Sending task creation request");
-            const response = await fetch("http://localhost:8100/tasks", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: token,
-              },
-              body: JSON.stringify({
-                title,
-                description,
-                assignee_id: assignee_id ? Number(assignee_id) : null,
-                due_date: due_date ? new Date(due_date).toISOString().split("T")[0] : null,
-                priority,
-              }),
-            });
-            const data = await response.json();
-            console.log("Task creation response:", data);
-            if (!response.ok) {
-              if (data.error === "User not in a family") {
-                console.log("User not in a family, showing toast");
-                const toast = document.createElement("ion-toast");
-                toast.message = "Please create or join a family first";
-                toast.duration = 3000;
-                toast.color = "warning";
-                toast.buttons = [
-                  {
-                    text: "Go to Family",
-                    handler: () => {
-                      console.log("Toast button clicked, redirecting to /family.html");
-                      window.location.href = "/family.html";
-                    },
-                  },
-                ];
-                document.body.appendChild(toast);
-                toast.present().catch((err) => console.error("Toast present error:", err));
-              }
-              throw new Error(data.error || "Failed to create task");
-            }
-            console.log("Task created, refetching tasks");
-            renderTasks();
-            const toast = document.createElement("ion-toast");
-            toast.message = "Task Created";
-            toast.duration = 2000;
-            toast.color = "success";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-            form.reset();
-          } catch (error) {
-            console.error("Error creating task:", error);
-            const toast = document.createElement("ion-toast");
-            toast.message = `Failed to create task: ${error.message || "Unknown server error"}`;
-            toast.duration = 2000;
-            toast.color = "danger";
-            document.body.appendChild(toast);
-            toast.present().catch((err) => console.error("Toast present error:", err));
-          }
-        });
+    // Menu navigation
+    const navItems = {
+      "nav-dashboard": "/index.html",
+      "nav-calendar": "/calendar.html",
+      "nav-tasks": "/tasks.html",
+      "nav-chat": "/chat.html",
+      "nav-family": "/family.html",
+    };
+    Object.keys(navItems).forEach((id) => {
+      const item = document.getElementById(id);
+      item?.addEventListener("click", () => {
+        const url = navItems[id];
+        console.log(`Navigating to ${url}`);
+        window.location.href = url;
       });
-    </script>
-  </body>
-</html>
+    });
+
+    // Sign out
+    document.getElementById("signOut")?.addEventListener("click", () => {
+      console.log("Sign out clicked");
+      localStorage.removeItem("token");
+      console.log("Logged out, cleared token");
+      window.location.href = "/login.html";
+    });
+
+    const taskList = document.getElementById("task_list");
+    const assigneeSelect = document.getElementById("assignee_id");
+
+    async function fetchFamilyMembers() {
+      try {
+        console.log("Fetching tasks");
+        const taskResponse = await fetch("http://localhost:8100/tasks", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const taskData = await taskResponse.json();
+        console.log("Fetch tasks response:", taskData);
+        if (!taskResponse.ok) {
+          if (taskData.error === "User not in a family") {
+            console.log("User not in a family, showing toast");
+            const toast = document.createElement("ion-toast");
+            toast.message = "Please create or join a family first";
+            toast.duration = 3000;
+            toast.color = "warning";
+            toast.buttons = [
+              {
+                text: "Go to Family",
+                handler: () => {
+                  console.log("Toast button clicked, redirecting to /family.html");
+                  window.location.href = "/family.html";
+                },
+              },
+            ];
+            document.body.appendChild(toast);
+            await toast.present();
+          }
+          throw new Error(taskData.error || "Failed to fetch tasks");
+        }
+
+        // Fetch user's families to get family_id
+        console.log("Fetching user's families");
+        const familyResponse = await fetch("http://localhost:8100/my-families", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const familyData = await familyResponse.json();
+        console.log("Fetch families response:", familyData);
+        if (!familyResponse.ok) {
+          throw new Error(familyData.error || "Failed to fetch families");
+        }
+        if (familyData.families.length === 0) {
+          throw new Error("User not in a family");
+        }
+        const familyId = familyData.families[0].id;
+
+        // Fetch family members
+        console.log(`Fetching members for family ID: ${familyId}`);
+        const memberResponse = await fetch(`http://localhost:8100/family/members?family_id=${familyId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const memberData = await memberResponse.json();
+        console.log("Fetch family members response:", memberData);
+        if (!memberResponse.ok) {
+          throw new Error(memberData.error || "Failed to fetch family members");
+        }
+
+        assigneeSelect.innerHTML = '<ion-select-option value="">None</ion-select-option>';
+        memberData.members.forEach((member) => {
+          const option = document.createElement("ion-select-option");
+          option.value = member.user_id;
+          option.textContent = member.username;
+          assigneeSelect.appendChild(option);
+        });
+
+        return taskData.tasks;
+      } catch (error) {
+        console.error("Error fetching family members or tasks:", error);
+        const toast = document.createElement("ion-toast");
+        toast.message = `Failed to load tasks: ${error.message}`;
+        toast.duration = 2000;
+        toast.color = "danger";
+        document.body.appendChild(toast);
+        await toast.present();
+        return [];
+      }
+    }
+
+    async function renderTasks() {
+      try {
+        const tasks = await fetchFamilyMembers();
+        taskList.innerHTML = "";
+        tasks.forEach((task) => {
+          const item = document.createElement("ion-item");
+          item.className = task.status === "completed" ? "completed" : "";
+          item.innerHTML = `
+            <ion-avatar slot="start">
+              <img src="/assets/user-${task.assignee_id || "default"}.png" alt="${task.assignee_username || "No assignee"}" onerror="this.src='/assets/user-default.png'" />
+            </ion-avatar>
+            <ion-label>
+              <h2>${task.title}</h2>
+              <p>${task.description || "No description"}</p>
+              <p>Assignee: ${task.assignee_username || "None"}</p>
+              <p>Due: ${task.due_date ? new Date(task.due_date).toLocaleDateString() : "No due date"}</p>
+              <p>Priority: ${task.priority}</p>
+              <p>Status: ${task.status}</p>
+            </ion-label>
+            <ion-button slot="end" fill="clear" id="toggle-${task.id}">
+              <ion-icon name="${task.status === "pending" ? "checkmark-circle-outline" : "refresh-circle-outline"}"></ion-icon>
+            </ion-button>
+          `;
+          taskList.appendChild(item);
+          document.getElementById(`toggle-${task.id}`)?.addEventListener("click", () => toggleTaskStatus(task.id, task.status));
+        });
+      } catch (error) {
+        console.error("Error rendering tasks:", error);
+      }
+    }
+
+    async function toggleTaskStatus(taskId, currentStatus) {
+      const newStatus = currentStatus === "pending" ? "completed" : "pending";
+      try {
+        console.log(`Toggling task ${taskId} to ${newStatus}`);
+        const response = await fetch(`http://localhost:8100/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        const data = await response.json();
+        console.log("Toggle task response:", data);
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to update task");
+        }
+        await renderTasks();
+        const toast = document.createElement("ion-toast");
+        toast.message = `Task marked as ${newStatus}`;
+        toast.duration = 2000;
+        toast.color = "success";
+        document.body.appendChild(toast);
+        await toast.present();
+      } catch (error) {
+        console.error("Error toggling task:", error);
+        const toast = document.createElement("ion-toast");
+        toast.message = `Failed to update task: ${error.message}`;
+        toast.duration = 2000;
+        toast.color = "danger";
+        document.body.appendChild(toast);
+        await toast.present();
+      }
+    }
+
+    await renderTasks();
+
+    document.getElementById("task_form")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      const title = formData.get("title")?.toString().trim();
+      const description = formData.get("description")?.toString().trim() || null;
+      const assignee_id = formData.get("assignee_id") || null;
+      const due_date = formData.get("due_date")?.toString();
+      const priority = formData.get("priority")?.toString() || "medium";
+
+      // Client-side validation
+      if (!title) {
+        const toast = document.createElement("ion-toast");
+        toast.message = "Task title is required";
+        toast.duration = 2000;
+        toast.color = "danger";
+        document.body.appendChild(toast);
+        await toast.present();
+        return;
+      }
+      if (title.length > 100) {
+        const toast = document.createElement("ion-toast");
+        toast.message = "Task title must be 100 characters or less";
+        toast.duration = 2000;
+        toast.color = "danger";
+        document.body.appendChild(toast);
+        await toast.present();
+        return;
+      }
+      if (!["low", "medium", "high"].includes(priority)) {
+        const toast = document.createElement("ion-toast");
+        toast.message = "Invalid priority value";
+        toast.duration = 2000;
+        toast.color = "danger";
+        document.body.appendChild(toast);
+        await toast.present();
+        return;
+      }
+
+      console.log("Task form submitted:", { title, description, assignee_id, due_date, priority });
+
+      try {
+        console.log("Sending task creation request");
+        const response = await fetch("http://localhost:8100/tasks", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title,
+            description,
+            assignee_id: assignee_id ? Number(assignee_id) : null,
+            due_date: due_date ? new Date(due_date).toISOString().split("T")[0] : null,
+            priority,
+          }),
+        });
+        const data = await response.json();
+        console.log("Task creation response:", data);
+        if (!response.ok) {
+          if (data.error === "User not in a family") {
+            console.log("User not in a family, showing toast");
+            const toast = document.createElement("ion-toast");
+            toast.message = "Please create or join a family first";
+            toast.duration = 3000;
+            toast.color = "warning";
+            toast.buttons = [
+              {
+                text: "Go to Family",
+                handler: () => {
+                  console.log("Toast button clicked, redirecting to /family.html");
+                  window.location.href = "/family.html";
+                },
+              },
+            ];
+            document.body.appendChild(toast);
+            await toast.present();
+          }
+          throw new Error(data.error || "Failed to create task");
+        }
+        console.log("Task created, refetching tasks");
+        await renderTasks();
+        const toast = document.createElement("ion-toast");
+        toast.message = "Task Created";
+        toast.duration = 2000;
+        toast.color = "success";
+        document.body.appendChild(toast);
+        await toast.present();
+        form.reset();
+      } catch (error) {
+        console.error("Error creating task:", error);
+        const toast = document.createElement("ion-toast");
+        toast.message = `Failed to create task: ${error.message}`;
+        toast.duration = 2000;
+        toast.color = "danger";
+        document.body.appendChild(toast);
+        await toast.present();
+      }
+    });
+  });
+</script>
