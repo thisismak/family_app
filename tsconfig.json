@@ -9,7 +9,6 @@
     "incremental": true,
     "outDir": "dist"
   },
-  "exclude": [
-    "dist"
-  ]
+  "include": ["src/**/*", "ormconfig.ts", "migrations/**/*", "server.ts"],
+  "exclude": ["node_modules"]
 }
