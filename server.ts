@@ -31,7 +31,12 @@ interface AuthRequest extends Request {
 // Middleware
 app.use(morgan('dev'));
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  index: false,
+  setHeaders: (res, filePath) => {
+    console.log(`Serving static file: ${filePath}`);
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: '10mb' }));
 
@@ -153,9 +158,9 @@ app.get('/health', async (req: Request, res: Response) => {
 
 // Root route
 app.get('/', async (req: Request, res: Response) => {
+  console.log('Root route accessed');
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // 未登錄，返回 login.html
     console.log('No token provided, serving login.html');
     return res.sendFile(path.join(__dirname, 'public', 'login.html'), (err) => {
       if (err) {
@@ -171,7 +176,6 @@ app.get('/', async (req: Request, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [decoded.userId]);
     if (!family) {
-      // 已登錄但未加入家庭，返回 family.html
       console.log(`User ${decoded.username} not in a family, serving family.html`);
       return res.sendFile(path.join(__dirname, 'public', 'family.html'), (err) => {
         if (err) {
@@ -180,7 +184,6 @@ app.get('/', async (req: Request, res: Response) => {
         }
       });
     }
-    // 已登錄且在家庭中，返回 index.html
     console.log(`User ${decoded.username} in family, serving index.html`);
     res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
       if (err) {
@@ -189,7 +192,6 @@ app.get('/', async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    // token 無效，返回 login.html
     console.error('Token verification error, serving login.html:', error);
     res.sendFile(path.join(__dirname, 'public', 'login.html'), (err) => {
       if (err) {
@@ -232,7 +234,7 @@ app.post('/register', async (req: Request, res: Response) => {
     );
     console.log('Registration successful:', { username });
     sendResponse(res, 201, true, { message: 'Registration successful' });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Register error:', error);
     sendResponse(res, 500, false, null, 'Server error');
   }
@@ -322,18 +324,27 @@ app.post('/family', authenticate, async (req: AuthRequest, res: Response) => {
 
   try {
     const db = await initDb();
-    const existingFamily = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
-    if (existingFamily) {
-      return sendResponse(res, 403, false, null, 'User is already in a family');
-    }
+    await db.run('BEGIN TRANSACTION');
+    try {
+      const existingFamily = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+      if (existingFamily) {
+        throw new Error('User is already in a family');
+      }
 
-    const result = await db.run('INSERT INTO family (name, owner_id) VALUES (?, ?)', [name, user_id]);
-    const family_id = result.lastID;
-    await db.run('INSERT INTO family_member (family_id, user_id, role) VALUES (?, ?, ?)', [family_id, user_id, 'admin']);
-    sendResponse(res, 201, true, { message: 'Family created', family_id });
-  } catch (error) {
+      const result = await db.run('INSERT INTO family (name, owner_id) VALUES (?, ?)', [name, user_id]);
+      const family_id = result.lastID;
+      await db.run('INSERT INTO family_member (family_id, user_id, role) VALUES (?, ?, ?)', [family_id, user_id, 'admin']);
+      await db.run('COMMIT');
+      console.log('Family created:', { family_id, name, owner_id: user_id });
+      sendResponse(res, 201, true, { message: 'Family created', family_id });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      throw error;
+    }
+  } catch (error: unknown) {
     console.error('Create family error:', error);
-    sendResponse(res, 500, false, null, 'Server error');
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    sendResponse(res, message === 'User is already in a family' ? 403 : 500, false, null, message);
   }
 });
 
@@ -348,21 +359,33 @@ app.post('/family/join', authenticate, async (req: AuthRequest, res: Response) =
 
   try {
     const db = await initDb();
-    const family = await db.get('SELECT id FROM family WHERE id = ?', [family_id]);
-    if (!family) {
-      return sendResponse(res, 404, false, null, 'Family not found');
-    }
+    await db.run('BEGIN TRANSACTION');
+    try {
+      const family = await db.get('SELECT id FROM family WHERE id = ?', [family_id]);
+      if (!family) {
+        throw new Error('Family not found');
+      }
 
-    const existingFamily = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
-    if (existingFamily) {
-      return sendResponse(res, 403, false, null, 'User is already in a family');
-    }
+      const existingFamily = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+      if (existingFamily) {
+        throw new Error('User is already in a family');
+      }
 
-    await db.run('INSERT INTO family_member (family_id, user_id, role) VALUES (?, ?, ?)', [family_id, user_id, 'member']);
-    sendResponse(res, 200, true, { message: 'Joined family' });
-  } catch (error) {
+      await db.run('INSERT INTO family_member (family_id, user_id, role) VALUES (?, ?, ?)', [family_id, user_id, 'member']);
+      await db.run('COMMIT');
+      console.log('User joined family:', { user_id, family_id });
+      sendResponse(res, 200, true, { message: 'Joined family' });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      throw error;
+    }
+  } catch (error: unknown) {
     console.error('Join family error:', error);
-    sendResponse(res, 500, false, null, 'Server error');
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    sendResponse(res, 
+      message === 'Family not found' ? 404 : 
+      message === 'User is already in a family' ? 403 : 500, 
+      false, null, message);
   }
 });
 
@@ -378,7 +401,9 @@ app.get('/my-families', authenticate, async (req: AuthRequest, res: Response) =>
        WHERE f.owner_id = ? OR fm.user_id = ?`,
       [user_id, user_id]
     );
-    sendResponse(res, 200, true, { families });
+    const responseFamilies = Array.isArray(families) ? families : [];
+    console.log('Fetched families for user:', { user_id, families: responseFamilies });
+    sendResponse(res, 200, true, { families: responseFamilies });
   } catch (error) {
     console.error('Fetch families error:', error);
     sendResponse(res, 500, false, null, 'Server error');
@@ -408,6 +433,7 @@ app.get('/family/members', authenticate, async (req: AuthRequest, res: Response)
        WHERE fm.family_id = ?`,
       [family_id]
     );
+    console.log('Fetched members for family:', { family_id, members });
     sendResponse(res, 200, true, { members });
   } catch (error) {
     console.error('Fetch family members error:', error);
@@ -422,6 +448,7 @@ app.get('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
+      console.log(`User ${user_id} not in a family, returning 403`);
       return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
@@ -429,6 +456,7 @@ app.get('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
       'SELECT id, title, start_datetime, end_datetime, reminder_datetime, creator_id FROM event WHERE family_id = ?',
       [family.family_id]
     );
+    console.log('Fetched events for family:', { family_id: family.family_id, events });
     sendResponse(res, 200, true, { events });
   } catch (error) {
     console.error('Fetch calendar error:', error);
@@ -452,6 +480,7 @@ app.post('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
+      console.log(`User ${user_id} not in a family, returning 403`);
       return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
@@ -460,6 +489,7 @@ app.post('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
       'INSERT INTO event (family_id, creator_id, title, start_datetime, end_datetime, reminder_datetime, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [family.family_id, user_id, title, start_datetime, end_datetime || null, reminder_datetime || null, created_at]
     );
+    console.log('Event created:', { event_id: result.lastID, family_id: family.family_id });
     sendResponse(res, 201, true, { message: 'Event created', event_id: result.lastID });
   } catch (error) {
     console.error('Create event error:', error);
@@ -474,6 +504,7 @@ app.get('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
+      console.log(`User ${user_id} not in a family, returning 403`);
       return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
@@ -482,6 +513,7 @@ app.get('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
       'FROM task t LEFT JOIN user u ON t.assignee_id = u.id WHERE t.family_id = ?',
       [family.family_id]
     );
+    console.log('Fetched tasks for family:', { family_id: family.family_id, tasks });
     sendResponse(res, 200, true, { tasks });
   } catch (error) {
     console.error('Fetch tasks error:', error);
@@ -505,12 +537,13 @@ app.post('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
-      return sendResponse(res, 403, false, null, 'User not in a family');
+      console.log(`User ${user_id} not in a family, returning 403`);
+      return sendResponse(res, 403, false, null, 'User is not in a family');
     }
 
     if (assignee_id) {
-      const assignee = await db.get('SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?', [family.family_id, assignee_id]);
-      if (!assignee) {
+      const exists = await db.get('SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?', [family.family_id, assignee_id]);
+      if (!exists) {
         return sendResponse(res, 400, false, null, 'Assignee is not a member of this family');
       }
     }
@@ -520,6 +553,7 @@ app.post('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
       'INSERT INTO task (family_id, creator_id, assignee_id, title, description, due_date, priority, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [family.family_id, user_id, assignee_id || null, title, description || null, due_date || null, priority || 'medium', 'pending', created_at]
     );
+    console.log('Task created:', { task_id: result.lastID, family_id: family.family_id });
     sendResponse(res, 201, true, { message: 'Task created', task_id: result.lastID });
   } catch (error) {
     console.error('Create task error:', error);
@@ -541,6 +575,7 @@ app.patch('/tasks/:id', authenticate, async (req: AuthRequest, res: Response) =>
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
+      console.log(`User ${user_id} not in a family, returning 403`);
       return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
@@ -550,6 +585,7 @@ app.patch('/tasks/:id', authenticate, async (req: AuthRequest, res: Response) =>
     }
 
     await db.run('UPDATE task SET status = ? WHERE id = ?', [status, task_id]);
+    console.log('Task status updated:', { task_id, status });
     sendResponse(res, 200, true, { message: 'Task status updated' });
   } catch (error) {
     console.error('Update task error:', error);
@@ -564,6 +600,7 @@ app.get('/messages', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
+      console.log(`Family not found for user_id: ${user_id}, returning 403`);
       return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
@@ -572,6 +609,7 @@ app.get('/messages', authenticate, async (req: AuthRequest, res: Response) => {
       'FROM message m JOIN user u ON m.sender_id = u.id WHERE m.family_id = ? ORDER BY m.sent_at ASC',
       [family.family_id]
     );
+    console.log('Fetched messages:', { family_id: family.family_id, messages });
     sendResponse(res, 200, true, { messages });
   } catch (error) {
     console.error('Fetch messages error:', error);
@@ -592,6 +630,7 @@ app.post('/messages', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
     if (!family) {
+      console.log(`User ${user_id} not in a family, returning 403`);
       return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
@@ -600,6 +639,7 @@ app.post('/messages', authenticate, async (req: AuthRequest, res: Response) => {
       'INSERT INTO message (family_id, sender_id, content, sent_at) VALUES (?, ?, ?, ?)',
       [family.family_id, user_id, content, sent_at]
     );
+    console.log('Message sent:', { message_id: result.lastID, family_id: family.family_id });
     sendResponse(res, 201, true, { message: 'Message sent', message_id: result.lastID });
   } catch (error) {
     console.error('Create message error:', error);
