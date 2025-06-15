@@ -6,5 +6,5 @@ export const AppDataSource = new DataSource({
   entities: ['src/entities/*.ts'],
   migrations: ['migrations/*.ts'],
   synchronize: false,
-  logging: true,
+  logging: process.env.NODE_ENV === 'development',
 });

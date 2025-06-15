@@ -13,6 +13,9 @@ import { Event } from './src/entities/Event';
 import { Task } from './src/entities/Task';
 import { Message } from './src/entities/Message';
 import { Not } from 'typeorm';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 // Load environment variables
 dotenv.config();
@@ -26,6 +29,33 @@ server.use(express.static('public'));
 server.use(express.urlencoded({ extended: true }));
 server.use(express.json({ limit: '10mb' }));
 
+// Configure multer for file uploads
+const uploadDir = path.join(__dirname, '../public/assets/avatars');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${randomUUID()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only images are allowed'));
+    }
+    cb(null, true);
+  },
+});
+
 // Initialize TypeORM
 AppDataSource.initialize()
   .then(() => console.log('TypeORM connected to SQLite database'))
@@ -38,16 +68,23 @@ server.get('/', (req: Request, res: Response) => {
 
 // Authentication middleware
 const authenticate = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization || (req.query.token as string) || '';
+  const token = req.headers.authorization?.replace('Bearer ', '') || (req.query.token as string) || '';
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
   try {
     const session = await AppDataSource.getRepository(Session).findOneBy({ token });
     if (!session) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    if (session.expires < Date.now()) {
+      await AppDataSource.getRepository(Session).delete({ token });
+      return res.status(401).json({ error: 'Session expired' });
     }
     (req as any).user_id = session.user_id;
     next();
   } catch (err) {
-    console.error('Authentication error:', err);
+    console.error(`Authentication error [token=${token}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -82,9 +119,9 @@ const registerHandler = async (req: Request, res: Response) => {
     await userRepository.save(user);
 
     console.log('Registration successful:', { id: user.id, username });
-    res.status(200).json({ message: 'Registration successful' });
+    res.status(201).json({ message: 'Registration successful' });
   } catch (err) {
-    console.error('Registration error:', err);
+    console.error(`Registration error [username=${username}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -124,7 +161,7 @@ const loginHandler = async (req: Request, res: Response) => {
     console.log('Login successful:', { user_id: user.id, token });
     res.status(200).json({ token });
   } catch (err) {
-    console.error('Login error:', err);
+    console.error(`Login error [username=${username}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -133,17 +170,20 @@ server.post('/login', loginHandler);
 
 // Handle user logout
 const logoutHandler = async (req: Request, res: Response) => {
-  const token = req.query.token as string;
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.body.token || '';
+  if (!token) {
+    return res.status(400).json({ error: 'No token provided' });
+  }
   try {
     await AppDataSource.getRepository(Session).delete({ token });
-    res.redirect('/');
+    res.status(200).json({ message: 'Logged out successfully' });
   } catch (err) {
-    console.error('Logout error:', err);
-    res.redirect('/');
+    console.error(`Logout error [token=${token}]:`, err);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
-server.get('/logout', logoutHandler);
+server.post('/logout', logoutHandler);
 
 // Get user info
 const userHandler = async (req: Request, res: Response) => {
@@ -158,7 +198,7 @@ const userHandler = async (req: Request, res: Response) => {
     }
     res.status(200).json({ user_id: user.id, username: user.username, email: user.email, avatar: user.avatar });
   } catch (err) {
-    console.error('User info error:', err);
+    console.error(`User info error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -185,12 +225,40 @@ const updateEmailHandler = async (req: Request, res: Response) => {
     console.log('Email updated:', { user_id, email: email || null });
     res.status(200).json({ message: 'Email updated successfully' });
   } catch (err) {
-    console.error('Update email error:', err);
+    console.error(`Update email error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
 server.patch('/user/email', authenticate, updateEmailHandler);
+
+// Handle avatar upload
+const uploadAvatarHandler = async (req: Request, res: Response) => {
+  const user_id = (req as any).user_id;
+
+  try {
+    await new Promise((resolve, reject) => {
+      upload.single('avatar')(req, res, (err) => {
+        if (err) return reject(err);
+        resolve(null);
+      });
+    });
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const avatarPath = `/assets/avatars/${req.file.filename}`;
+    await AppDataSource.getRepository(User).update({ id: user_id }, { avatar: avatarPath });
+
+    res.status(200).json({ message: 'Avatar uploaded', avatar: avatarPath });
+  } catch (err) {
+    console.error(`Upload avatar error [user_id=${user_id}]:`, err);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
+};
+
+server.post('/user/avatar', authenticate, uploadAvatarHandler);
 
 // Handle family creation
 const createFamilyHandler = async (req: Request, res: Response) => {
@@ -219,9 +287,9 @@ const createFamilyHandler = async (req: Request, res: Response) => {
     familyMember.role = 'admin';
     await familyMemberRepository.save(familyMember);
 
-    res.status(200).json({ message: 'Family created', family_id: family.id });
+    res.status(201).json({ message: 'Family created', family_id: family.id });
   } catch (err) {
-    console.error('Create family error:', err);
+    console.error(`Create family error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -254,9 +322,9 @@ const joinFamilyHandler = async (req: Request, res: Response) => {
     familyMember.role = 'member';
     await familyMemberRepository.save(familyMember);
 
-    res.status(200).json({ message: 'Joined family' });
+    res.status(201).json({ message: 'Joined family' });
   } catch (err) {
-    console.error('Join family error:', err);
+    console.error(`Join family error [user_id=${user_id}, family_id=${family_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -277,7 +345,7 @@ const myFamiliesHandler = async (req: Request, res: Response) => {
 
     res.status(200).json({ families });
   } catch (err) {
-    console.error('My families error:', err);
+    console.error(`My families error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -289,7 +357,9 @@ const familyMembersHandler = async (req: Request, res: Response) => {
   const user_id = (req as any).user_id;
   const family_id = req.query.family_id as string;
 
-  if (!family_id) return res.status(400).json({ error: 'Family ID is required' });
+  if (!family_id || isNaN(parseInt(family_id))) {
+    return res.status(400).json({ error: 'Valid Family ID is required' });
+  }
 
   try {
     const familyMemberRepository = AppDataSource.getRepository(FamilyMember);
@@ -301,13 +371,13 @@ const familyMembersHandler = async (req: Request, res: Response) => {
     const members = await familyMemberRepository
       .createQueryBuilder('family_member')
       .leftJoinAndSelect('family_member.user', 'user')
-      .where('family_member.family_id = :family_id', { family_id })
+      .where('family_member.family_id = :family_id', { family_id: parseInt(family_id) })
       .select(['family_member.user_id', 'user.username'])
       .getMany();
 
     res.status(200).json({ members: members.map((m) => ({ user_id: m.user_id, username: m.user.username })) });
   } catch (err) {
-    console.error('Family members error:', err);
+    console.error(`Family members error [user_id=${user_id}, family_id=${family_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -331,7 +401,7 @@ const calendarHandler = async (req: Request, res: Response) => {
 
     res.status(200).json({ events });
   } catch (err) {
-    console.error('Calendar error:', err);
+    console.error(`Calendar error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -345,6 +415,11 @@ const createEventHandler = async (req: Request, res: Response) => {
 
   if (!title || !start_datetime) return res.status(400).json({ error: 'Title and start date are required' });
   if (title.length > 100) return res.status(400).json({ error: 'Title must be 100 characters or less' });
+  if (!Date.parse(start_datetime)) return res.status(400).json({ error: 'Invalid start date format' });
+  if (end_datetime && !Date.parse(end_datetime)) return res.status(400).json({ error: 'Invalid end date format' });
+  if (reminder_datetime && !Date.parse(reminder_datetime)) {
+    return res.status(400).json({ error: 'Invalid reminder date format' });
+  }
 
   try {
     const familyMember = await AppDataSource.getRepository(FamilyMember).findOneBy({ user_id });
@@ -362,9 +437,9 @@ const createEventHandler = async (req: Request, res: Response) => {
     event.created_at = new Date().toISOString();
     await AppDataSource.getRepository(Event).save(event);
 
-    res.status(200).json({ message: 'Event created', event_id: event.id });
+    res.status(201).json({ message: 'Event created', event_id: event.id });
   } catch (err) {
-    console.error('Create event error:', err);
+    console.error(`Create event error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -400,7 +475,7 @@ const tasksHandler = async (req: Request, res: Response) => {
 
     res.status(200).json({ tasks: tasks.map((t) => ({ ...t, assignee_username: t.assignee?.username })) });
   } catch (err) {
-    console.error('Tasks error:', err);
+    console.error(`Tasks error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -417,6 +492,7 @@ const createTaskHandler = async (req: Request, res: Response) => {
   if (priority && !['low', 'medium', 'high'].includes(priority)) {
     return res.status(400).json({ error: 'Priority must be low, medium, or high' });
   }
+  if (due_date && !Date.parse(due_date)) return res.status(400).json({ error: 'Invalid due date format' });
 
   try {
     const familyMemberRepository = AppDataSource.getRepository(FamilyMember);
@@ -449,7 +525,7 @@ const createTaskHandler = async (req: Request, res: Response) => {
     console.log('Task created:', { task_id: task.id, title, family_id: task.family_id });
     res.status(201).json({ message: 'Task created', task_id: task.id });
   } catch (err) {
-    console.error('Create task error:', err);
+    console.error(`Create task error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -476,7 +552,7 @@ const messagesHandler = async (req: Request, res: Response) => {
 
     res.status(200).json({ messages: messages.map((m) => ({ ...m, sender_username: m.sender.username })) });
   } catch (err) {
-    console.error('Messages error:', err);
+    console.error(`Messages error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -504,9 +580,9 @@ const createMessageHandler = async (req: Request, res: Response) => {
     message.sent_at = new Date().toISOString();
     await AppDataSource.getRepository(Message).save(message);
 
-    res.status(200).json({ message: 'Message sent', message_id: message.id });
+    res.status(201).json({ message: 'Message sent', message_id: message.id });
   } catch (err) {
-    console.error('Create message error:', err);
+    console.error(`Create message error [user_id=${user_id}]:`, err);
     res.status(500).json({ error: 'Server error' });
   }
 };
