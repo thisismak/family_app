@@ -1,4 +1,6 @@
 import express, { Request, Response, Application, NextFunction } from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import { print } from 'listening-on';
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
@@ -12,6 +14,13 @@ import morgan from 'morgan';
 dotenv.config();
 
 const app: Application = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "http://localhost:8100",
+    methods: ["GET", "POST"]
+  }
+});
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 8100;
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -138,6 +147,81 @@ const sendResponse = (res: Response, status: number, success: boolean, data?: an
   res.status(status).json({ success, data, error });
 };
 
+// Socket.IO Authentication and Events
+io.use(async (socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) {
+    return next(new Error('Authentication error: No token provided'));
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; username: string };
+    socket.data.user = decoded;
+    next();
+  } catch (error) {
+    console.error('Socket.IO authentication error:', error);
+    next(new Error('Authentication error: Invalid token'));
+  }
+});
+
+io.on('connection', async (socket) => {
+  const user = socket.data.user;
+  console.log(`User ${user.username} connected via Socket.IO`);
+
+  try {
+    const db = await initDb();
+    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user.userId]);
+    if (!family) {
+      socket.emit('error', 'User not in a family');
+      socket.disconnect();
+      return;
+    }
+
+    socket.join(`family_${family.family_id}`);
+    console.log(`User ${user.username} joined family_${family.family_id}`);
+
+    const messages = await db.all(
+      'SELECT m.id, m.content, m.sent_at, m.sender_id, u.username AS sender_username ' +
+      'FROM message m JOIN user u ON m.sender_id = u.id WHERE m.family_id = ? ORDER BY m.sent_at ASC',
+      [family.family_id]
+    );
+    socket.emit('load_messages', messages);
+
+    socket.to(`family_${family.family_id}`).emit('user_joined', `${user.username} 已加入聊天`);
+
+    socket.on('message', async (message) => {
+      try {
+        const sent_at = new Date().toISOString();
+        const result = await db.run(
+          'INSERT INTO message (family_id, sender_id, content, sent_at) VALUES (?, ?, ?, ?)',
+          [family.family_id, user.userId, message.content, sent_at]
+        );
+        const savedMessage = {
+          id: result.lastID,
+          content: message.content,
+          sent_at,
+          sender_id: user.userId,
+          sender_username: user.username,
+        };
+        io.to(`family_${family.family_id}`).emit('message', savedMessage);
+        console.log('Message broadcasted:', savedMessage);
+      } catch (error) {
+        console.error('Socket.IO message error:', error);
+        socket.emit('error', 'Failed to send message');
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log(`User ${user.username} disconnected`);
+      socket.to(`family_${family.family_id}`).emit('user_left', `${user.username} 已離開聊天`);
+    });
+  } catch (error) {
+    console.error('Socket.IO connection error:', error);
+    socket.emit('error', 'Server error');
+    socket.disconnect();
+  }
+});
+
+// Existing REST API Routes
 app.get('/health', async (req: Request, res: Response) => {
   try {
     const db = await initDb();
@@ -256,7 +340,7 @@ app.get('/user', authenticate, async (req: AuthRequest, res: Response) => {
     const db = await initDb();
     const user = await db.get('SELECT id, username, email, avatar FROM user WHERE id = ?', [user_id]);
     if (!user) {
-      return sendResponse(res, 404, false, null, 'User not found');
+      return sendResponse(res, 400, false, null, 'User not found');
     }
     sendResponse(res, 200, true, { user_id: user.id, username: user.username, email: user.email, avatar: user.avatar });
   } catch (error) {
@@ -701,7 +785,7 @@ app.post('/messages', authenticate, async (req: AuthRequest, res: Response) => {
 async function startServer() {
   try {
     await initDb();
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       print(PORT);
       console.log(`Server running on http://localhost:${PORT}`);
     });
