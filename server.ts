@@ -370,16 +370,14 @@ app.get('/my-families', authenticate, async (req: AuthRequest, res: Response) =>
   try {
     const db = await initDb();
     const families = await db.all(
-      `SELECT DISTINCT f.id, f.name, f.owner_id, fm.role, u.username
-       FROM family f 
-       LEFT JOIN family_member fm ON f.id = fm.family_id 
-       JOIN user u ON fm.user_id = u.id
-       WHERE f.owner_id = ? OR fm.user_id = ?`,
-      [user_id, user_id]
+      `SELECT f.id, f.name, f.owner_id, fm.role
+       FROM family f
+       JOIN family_member fm ON f.id = fm.family_id
+       WHERE fm.user_id = ?`,
+      [user_id]
     );
-    const responseFamilies = Array.isArray(families) ? families : [];
-    console.log('Fetched families for user:', { user_id, families: responseFamilies });
-    sendResponse(res, 200, true, { families: responseFamilies });
+    console.log('Fetched families for user:', { user_id, families });
+    sendResponse(res, 200, true, { families });
   } catch (error) {
     console.error('Fetch families error:', error);
     sendResponse(res, 500, false, null, 'Server error');

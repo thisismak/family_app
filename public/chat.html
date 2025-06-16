@@ -81,12 +81,13 @@
                   <ion-row>
                     <ion-col>
                       <ion-item>
-                        <ion-label position="stacked">訊息</ion-label>
                         <ion-textarea
                           name="content"
                           id="content"
                           placeholder="輸入您的訊息"
                           required
+                          label="訊息"
+                          label-placement="stacked"
                         ></ion-textarea>
                       </ion-item>
                     </ion-col>
@@ -175,11 +176,14 @@
               },
             });
             const data = await response.json();
-            console.log("檢查家庭狀態回應:", JSON.stringify(data, null, 2));
+            console.log("檢查家庭狀態回應:", data);
             if (!response.ok) {
+              console.error("家庭狀態請求失敗:", data.error);
               throw new Error(data.error || "無法檢查家庭狀態");
             }
-            return data.success && data.families && data.families.length > 0;
+            const hasFamily = data.success && Array.isArray(data.data.families) && data.data.families.length > 0;
+            console.log("hasFamily 結果:", hasFamily);
+            return hasFamily;
           } catch (error) {
             console.error("檢查家庭狀態錯誤:", error);
             await showToast(`無法檢查家庭狀態: ${error.message}`, 2000, "danger");
@@ -193,11 +197,15 @@
 
         // 檢查家庭狀態
         const hasFamily = await checkFamilyStatus();
+        console.log("最終 hasFamily 值:", hasFamily);
         if (!hasFamily) {
           await showToast("您尚未加入任何家庭，請先創建或加入家庭", 3000, "warning");
           chatList.innerHTML = `<ion-item><ion-label>請先創建或加入家庭以使用聊天功能</ion-label></ion-item>`;
           submitMessageButton.disabled = true;
           return;
+        } else {
+          submitMessageButton.disabled = false;
+          chatList.innerHTML = "";
         }
 
         async function fetchUser() {
@@ -216,9 +224,9 @@
               throw new Error(data.error || "無法獲取用戶資料");
             }
             return {
-              username: data.user.username || "Guest",
-              email: data.user.email || "無電子郵件",
-              user_id: data.user.user_id,
+              username: data.data.username || "Guest",
+              email: data.data.email || "無電子郵件",
+              user_id: data.data.user_id,
             };
           } catch (err) {
             console.error("獲取用戶錯誤:", err);
