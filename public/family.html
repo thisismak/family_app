@@ -186,6 +186,30 @@
           }
         }
 
+        // 獲取當前用戶信息
+        let currentUsername = "未知用戶";
+        async function fetchUser() {
+          try {
+            console.log("正在獲取當前用戶信息");
+            const response = await fetch("http://localhost:8100/user", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            const data = await response.json();
+            console.log("獲取用戶回應:", JSON.stringify(data, null, 2));
+            if (!response.ok) {
+              throw new Error(data.error || "無法獲取用戶信息");
+            }
+            currentUsername = data.data.username || "未知用戶";
+          } catch (error) {
+            console.error("獲取用戶錯誤:", error);
+            await showToast(`無法載入用戶信息: ${error.message || '伺服器響應異常'}`, 3000, "danger");
+          }
+        }
+
         async function fetchFamilies() {
           try {
             console.log("正在獲取家庭列表");
@@ -237,7 +261,7 @@
                 item.innerHTML = `
                   <ion-label>
                     <h2>${family.name}</h2>
-                    <p>個人名稱: ${family.username || '未知用戶'}</p>
+                    <p>當前成員名稱: ${currentUsername}</p>
                     <p>ID: ${family.id} | 角色: ${family.role || '擁有者'}</p>
                     <p>家庭成員: ${members.length > 0 ? members.map(m => m.username).join(', ') : '未找到成員'}</p>
                   </ion-label>
@@ -251,7 +275,8 @@
           }
         }
 
-        // 載入家庭列表
+        // 獲取用戶信息並載入家庭列表
+        await fetchUser();
         await fetchFamilies();
 
         document.getElementById("create_family_form")?.addEventListener("submit", async (event) => {
