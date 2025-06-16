@@ -9,7 +9,6 @@ import path from 'path';
 import dotenv from 'dotenv';
 import morgan from 'morgan';
 
-// Load environment variables
 dotenv.config();
 
 const app: Application = express();
@@ -23,12 +22,10 @@ if (!JWT_SECRET) {
 
 console.log(`JWT_SECRET loaded (length: ${JWT_SECRET.length})`);
 
-// Extend Request interface for type safety
 interface AuthRequest extends Request {
   user?: { userId: number; username: string };
 }
 
-// Middleware
 app.use(morgan('dev'));
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -40,7 +37,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ limit: '10mb' }));
 
-// Initialize SQLite database (singleton)
 let db: Database | null = null;
 async function initDb(): Promise<Database> {
   if (db) return db;
@@ -121,7 +117,6 @@ async function initDb(): Promise<Database> {
   }
 }
 
-// Authentication middleware
 const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -139,12 +134,10 @@ const authenticate = async (req: AuthRequest, res: Response, next: NextFunction)
   }
 };
 
-// Consistent response format
 const sendResponse = (res: Response, status: number, success: boolean, data?: any, error?: string) => {
   res.status(status).json({ success, data, error });
 };
 
-// Health check
 app.get('/health', async (req: Request, res: Response) => {
   try {
     const db = await initDb();
@@ -156,7 +149,6 @@ app.get('/health', async (req: Request, res: Response) => {
   }
 });
 
-// Root route
 app.get('/', async (req: Request, res: Response) => {
   console.log('Root route accessed');
   const authHeader = req.headers.authorization;
@@ -191,7 +183,6 @@ app.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// Register
 app.post('/register', async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
   console.log('Registration attempt:', { username });
@@ -229,7 +220,6 @@ app.post('/register', async (req: Request, res: Response) => {
   }
 });
 
-// Login
 app.post('/login', async (req: Request, res: Response) => {
   const { username, password } = req.body;
   console.log('Login attempt:', { username });
@@ -255,13 +245,11 @@ app.post('/login', async (req: Request, res: Response) => {
   }
 });
 
-// Logout
 app.post('/logout', (req: Request, res: Response) => {
   console.log('Logout requested');
   sendResponse(res, 200, true, { message: 'Logout successful' });
 });
 
-// Get user info
 app.get('/user', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   try {
@@ -277,7 +265,6 @@ app.get('/user', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Update user email
 app.patch('/user/email', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   const { email } = req.body;
@@ -302,7 +289,6 @@ app.patch('/user/email', authenticate, async (req: AuthRequest, res: Response) =
   }
 });
 
-// Create family
 app.post('/family', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   const { name } = req.body;
@@ -338,7 +324,6 @@ app.post('/family', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Join family
 app.post('/family/join', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   const { family_id } = req.body;
@@ -380,7 +365,6 @@ app.post('/family/join', authenticate, async (req: AuthRequest, res: Response) =
   }
 });
 
-// Get user's families
 app.get('/my-families', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   try {
@@ -402,7 +386,6 @@ app.get('/my-families', authenticate, async (req: AuthRequest, res: Response) =>
   }
 });
 
-// Get family members
 app.get('/family/members', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   const family_id = req.query.family_id as string;
@@ -433,7 +416,6 @@ app.get('/family/members', authenticate, async (req: AuthRequest, res: Response)
   }
 });
 
-// Get calendar events
 app.get('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   try {
@@ -456,7 +438,6 @@ app.get('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Create calendar event
 app.post('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   const { title, start_datetime, end_datetime, reminder_datetime } = req.body;
@@ -489,9 +470,11 @@ app.post('/calendar', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get tasks
 app.get('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
+  const query = (req.query.q as string)?.trim() || '';
+  const sort = req.query.sort as string;
+
   try {
     const db = await initDb();
     const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
@@ -500,11 +483,29 @@ app.get('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
       return sendResponse(res, 403, false, null, 'User not in a family');
     }
 
-    const tasks = await db.all(
+    let sql = 
       'SELECT t.id, t.title, t.description, t.due_date, t.priority, t.status, t.creator_id, t.assignee_id, u.username AS assignee_username' +
-      ' FROM task t LEFT JOIN user u ON t.assignee_id = u.id WHERE t.family_id = ?',
-      [family.family_id]
-    );
+      ' FROM task t LEFT JOIN user u ON t.assignee_id = u.id WHERE t.family_id = ?';
+    const params = [family.family_id];
+
+    if (query) {
+      sql += ' AND (t.title LIKE ? OR t.description LIKE ?)';
+      params.push(`%${query}%`, `%${query}%`);
+    }
+
+    if (sort) {
+      const sortMap: { [key: string]: string } = {
+        'due_date_asc': 'due_date ASC',
+        'due_date_desc': 'due_date DESC',
+        'priority_asc': "CASE priority WHEN 'low' THEN 1 WHEN 'medium' THEN 2 WHEN 'high' THEN 3 END ASC",
+        'priority_desc': "CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END DESC",
+      };
+      if (sortMap[sort]) {
+        sql += ` ORDER BY ${sortMap[sort]}`;
+      }
+    }
+
+    const tasks = await db.all(sql, params);
     console.log('Fetched tasks:', { family_id: family.family_id, tasks });
     sendResponse(res, 200, true, { tasks });
   } catch (error) {
@@ -513,7 +514,6 @@ app.get('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Create task
 app.post('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   const { title, description, assignee_id, due_date, priority } = req.body;
@@ -527,39 +527,55 @@ app.post('/tasks', authenticate, async (req: AuthRequest, res: Response) => {
 
   try {
     const db = await initDb();
-    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
-    if (!family) {
-      console.log('User not in a family:', user_id);
-      return sendResponse(res, 403, false, null, 'User not in a family');
-    }
-
-    if (assignee_id) {
-      const exists = await db.get('SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?', [family.family_id, assignee_id]);
-      if (!exists) {
-        return sendResponse(res, 400, false, null, 'Assignee must be a family member');
+    await db.run('BEGIN TRANSACTION');
+    try {
+      const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+      if (!family) {
+        console.log('User not in a family:', user_id);
+        throw new Error('User not in a family');
       }
-    }
 
-    const created_at = new Date().toISOString();
-    const result = await db.run(
-      'INSERT INTO task (family_id, creator_id, assignee_id, title, description, due_date, priority, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [family.family_id, user_id, assignee_id || null, title, description || null, due_date || null, priority || 'medium', 'pending', created_at]
-    );
-    console.log('Task created:', { task_id: result.lastID, family_id: family.family_id });
-    sendResponse(res, 201, true, { message: 'Task created', task_id: result.lastID });
-  } catch (error) {
+      if (assignee_id) {
+        const exists = await db.get('SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?', [family.family_id, assignee_id]);
+        if (!exists) {
+          throw new Error('Assignee must be a family member');
+        }
+      }
+
+      const created_at = new Date().toISOString();
+      const result = await db.run(
+        'INSERT INTO task (family_id, creator_id, assignee_id, title, description, due_date, priority, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [family.family_id, user_id, assignee_id || null, title, description || null, due_date || null, priority || 'medium', 'pending', created_at]
+      );
+      await db.run('COMMIT');
+      console.log('Task created:', { task_id: result.lastID, family_id: family.family_id });
+      sendResponse(res, 201, true, { message: 'Task created', task_id: result.lastID });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      throw error;
+    }
+  } catch (error: unknown) {
     console.error('Create task error:', error);
-    sendResponse(res, 500, false, null, 'Server error');
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    sendResponse(res, 
+      message === 'User not in a family' ? 403 : 
+      message === 'Assignee must be a family member' ? 400 : 500, 
+      false, null, message);
   }
 });
 
-// Update task status
 app.patch('/tasks/:id', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   const task_id = parseInt(req.params.id);
-  const { status } = req.body;
+  const { title, description, assignee_id, due_date, priority, status } = req.body;
 
-  if (!status || !['pending', 'completed'].includes(status)) {
+  if (title && title.length > 100) {
+    return sendResponse(res, 400, false, null, 'Title must be 100 characters or less');
+  }
+  if (priority && !['low', 'medium', 'high'].includes(priority)) {
+    return sendResponse(res, 400, false, null, 'Priority must be low, medium, or high');
+  }
+  if (status && !['pending', 'completed'].includes(status)) {
     return sendResponse(res, 400, false, null, 'Status must be pending or completed');
   }
 
@@ -576,16 +592,62 @@ app.patch('/tasks/:id', authenticate, async (req: AuthRequest, res: Response) =>
       return sendResponse(res, 404, false, null, 'Task not found');
     }
 
-    await db.run('UPDATE task SET status = ? WHERE id = ?', [status, task_id]);
-    console.log('Task status updated:', { task_id, status });
-    sendResponse(res, 200, true, { message: 'Task status updated' });
+    if (assignee_id) {
+      const exists = await db.get('SELECT user_id FROM family_member WHERE family_id = ? AND user_id = ?', [family.family_id, assignee_id]);
+      if (!exists) {
+        return sendResponse(res, 400, false, null, 'Assignee must be a family member');
+      }
+    }
+
+    const updates: { [key: string]: any } = {};
+    if (title) updates.title = title;
+    if (description !== undefined) updates.description = description || null;
+    if (assignee_id !== undefined) updates.assignee_id = assignee_id || null;
+    if (due_date !== undefined) updates.due_date = due_date || null;
+    if (priority) updates.priority = priority;
+    if (status) updates.status = status;
+
+    if (Object.keys(updates).length === 0) {
+      return sendResponse(res, 400, false, null, 'No fields to update');
+    }
+
+    const setClause = Object.keys(updates).map((key) => `${key} = ?`).join(', ');
+    const values = [...Object.values(updates), task_id];
+    await db.run(`UPDATE task SET ${setClause} WHERE id = ?`, values);
+    console.log('Task updated:', { task_id, updates });
+    sendResponse(res, 200, true, { message: 'Task updated' });
   } catch (error) {
     console.error('Update task error:', error);
     sendResponse(res, 500, false, null, 'Server error');
   }
 });
 
-// Get messages
+app.delete('/tasks/:id', authenticate, async (req: AuthRequest, res: Response) => {
+  const user_id = req.user!.userId;
+  const task_id = parseInt(req.params.id);
+
+  try {
+    const db = await initDb();
+    const family = await db.get('SELECT family_id FROM family_member WHERE user_id = ?', [user_id]);
+    if (!family) {
+      console.log('User not in a family:', user_id);
+      return sendResponse(res, 403, false, null, 'User not in a family');
+    }
+
+    const task = await db.get('SELECT id FROM task WHERE id = ? AND family_id = ?', [task_id, family.family_id]);
+    if (!task) {
+      return sendResponse(res, 404, false, null, 'Task not found');
+    }
+
+    await db.run('DELETE FROM task WHERE id = ?', [task_id]);
+    console.log('Task deleted:', { task_id });
+    sendResponse(res, 200, true, { message: 'Task deleted' });
+  } catch (error) {
+    console.error('Delete task error:', error);
+    sendResponse(res, 500, false, null, 'Server error');
+  }
+});
+
 app.get('/messages', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   try {
@@ -609,7 +671,6 @@ app.get('/messages', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Create message
 app.post('/messages', authenticate, async (req: AuthRequest, res: Response) => {
   const user_id = req.user!.userId;
   const { content } = req.body;
@@ -639,7 +700,6 @@ app.post('/messages', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Start server
 async function startServer() {
   try {
     await initDb();
