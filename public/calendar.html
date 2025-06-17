@@ -112,9 +112,9 @@
           e.preventDefault();
           const eventData = {
             title,
-            start_datetime: startDateTime ? startDateTime.toISOString() : null,
-            end_datetime: endDateTime ? endDateTime.toISOString() : null,
-            reminder_datetime: reminderDateTime ? reminderDateTime.toISOString() : null,
+            start_datetime: startDateTime ? startDateTime.format('YYYY-MM-DD HH') + ':00:00.000Z' : null,
+            end_datetime: endDateTime ? endDateTime.format('YYYY-MM-DD HH') + ':00:00.000Z' : null,
+            reminder_datetime: reminderDateTime ? reminderDateTime.format('YYYY-MM-DD HH') + ':00:00.000Z' : null,
           };
           console.log("正在創建事件:", eventData);
           await onSubmit(eventData);
@@ -144,7 +144,8 @@
                 <ion-col>
                   <ion-item>
                     <DatePicker
-                      showTime
+                      showTime={{ format: 'HH' }}
+                      format="YYYY-MM-DD HH"
                       value={startDateTime}
                       onChange={setStartDateTime}
                       placeholder="選擇開始時間"
@@ -158,7 +159,8 @@
                 <ion-col>
                   <ion-item>
                     <DatePicker
-                      showTime
+                      showTime={{ format: 'HH' }}
+                      format="YYYY-MM-DD HH"
                       value={endDateTime}
                       onChange={setEndDateTime}
                       placeholder="選擇結束時間"
@@ -171,7 +173,8 @@
                 <ion-col>
                   <ion-item>
                     <DatePicker
-                      showTime
+                      showTime={{ format: 'HH' }}
+                      format="YYYY-MM-DD HH"
                       value={reminderDateTime}
                       onChange={setReminderDateTime}
                       placeholder="選擇提醒時間"
@@ -193,20 +196,7 @@
       };
 
       const App = () => {
-        async function showToast(message, duration, color) {
-          if (window.Ionic) {
-            const toast = document.createElement("ion-toast");
-            toast.message = message;
-            toast.duration = duration;
-            toast.color = color;
-            document.body.appendChild(toast);
-            await toast.present();
-          } else {
-            alert(message);
-          }
-        }
-
-        async function handleSubmit(eventData) {
+        const handleSubmit = async (eventData) => {
           const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
           try {
             const response = await fetch("http://localhost:8100/calendar", {
@@ -222,15 +212,15 @@
             if (!response.ok) {
               throw new Error(data.error || "無法創建事件");
             }
-            await showToast(`事件已創建 (ID: ${data.data.event_id})`, 2000, "success");
-            await fetchEvents();
+            await window.showToast(`事件已創建 (ID: ${data.data.event_id})`, 2000, "success");
+            await window.fetchEvents();
           } catch (error) {
             console.error("創建事件錯誤:", error);
-            await showToast(`無法創建事件: ${error.message}`, 2000, "danger");
+            await window.showToast(`無法創建事件: ${error.message}`, 2000, "danger");
           }
-        }
+        };
 
-        return <CreateEventForm onSubmit={handleSubmit} showToast={showToast} />;
+        return <CreateEventForm onSubmit={handleSubmit} showToast={window.showToast} />;
       };
 
       // Render the React component
@@ -238,6 +228,66 @@
     </script>
 
     <script>
+      // Global showToast function
+      window.showToast = async function (message, duration, color) {
+        if (window.Ionic) {
+          const toast = document.createElement("ion-toast");
+          toast.message = message;
+          toast.duration = duration;
+          toast.color = color;
+          document.body.appendChild(toast);
+          await toast.present();
+        } else {
+          alert(message);
+        }
+      };
+
+      // Global fetchEvents function
+      window.fetchEvents = async function () {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        try {
+          console.log("正在獲取事件列表");
+          const response = await fetch("http://localhost:8100/calendar", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const data = await response.json();
+          console.log("獲取事件回應:", data);
+          if (!response.ok) {
+            throw new Error(data.error || "無法獲取事件");
+          }
+
+          const eventList = document.getElementById("event-list");
+          eventList.innerHTML = "";
+
+          const events = Array.isArray(data.data.events) ? data.data.events : [];
+          console.log("處理事件數據:", events);
+
+          if (events.length === 0) {
+            eventList.innerHTML = `<ion-item><ion-label>未找到事件</ion-label></ion-item>`;
+          } else {
+            for (const event of events) {
+              const item = document.createElement("ion-item");
+              item.innerHTML = `
+                <ion-label>
+                  <h2>${event.title}</h2>
+                  <p>開始: ${new Date(event.start_datetime).toLocaleString()}</p>
+                  ${event.end_datetime ? `<p>結束: ${new Date(event.end_datetime).toLocaleString()}</p>` : ""}
+                  ${event.reminder_datetime ? `<p>提醒: ${new Date(event.reminder_datetime).toLocaleString()}</p>` : ""}
+                </ion-label>
+              `;
+              eventList.appendChild(item);
+            }
+          }
+        } catch (error) {
+          console.error("獲取事件錯誤:", error);
+          await window.showToast(`無法載入事件列表: ${error.message || "伺服器響應異常"}`, 3000, "danger");
+        }
+      };
+
       document.addEventListener("DOMContentLoaded", async () => {
         console.log("DOM 已載入 calendar.html");
         console.log("Ionic 版本:", window.Ionic?.version || "未載入");
@@ -275,19 +325,6 @@
           window.location.href = "/login.html";
         });
 
-        async function showToast(message, duration, color) {
-          if (window.Ionic) {
-            const toast = document.createElement("ion-toast");
-            toast.message = message;
-            toast.duration = duration;
-            toast.color = color;
-            document.body.appendChild(toast);
-            await toast.present();
-          } else {
-            alert(message);
-          }
-        }
-
         async function checkFamilyStatus() {
           try {
             console.log("檢查用戶家庭狀態");
@@ -306,7 +343,7 @@
             return data.success && data.data && data.data.families && data.data.families.length > 0;
           } catch (error) {
             console.error("檢查家庭狀態錯誤:", error);
-            await showToast(`無法檢查家庭狀態: ${error.message}`, 2000, "danger");
+            await window.showToast(`無法檢查家庭狀態: ${error.message}`, 2000, "danger");
             return false;
           }
         }
@@ -314,57 +351,13 @@
         // 檢查家庭狀態
         const hasFamily = await checkFamilyStatus();
         if (!hasFamily) {
-          await showToast("您尚未加入任何家庭，請先創建或加入家庭", 3000, "warning");
+          await window.showToast("您尚未加入任何家庭，請先創建或加入家庭", 3000, "warning");
           window.location.href = "/family.html";
           return;
         }
 
-        async function fetchEvents() {
-          try {
-            console.log("正在獲取事件列表");
-            const response = await fetch("http://localhost:8100/calendar", {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-            });
-            const data = await response.json();
-            console.log("獲取事件回應:", data);
-            if (!response.ok) {
-              throw new Error(data.error || "無法獲取事件");
-            }
-
-            const eventList = document.getElementById("event-list");
-            eventList.innerHTML = "";
-
-            const events = Array.isArray(data.data.events) ? data.data.events : [];
-            console.log("處理事件數據:", events);
-
-            if (events.length === 0) {
-              eventList.innerHTML = `<ion-item><ion-label>未找到事件</ion-label></ion-item>`;
-            } else {
-              for (const event of events) {
-                const item = document.createElement("ion-item");
-                item.innerHTML = `
-                  <ion-label>
-                    <h2>${event.title}</h2>
-                    <p>開始: ${new Date(event.start_datetime).toLocaleString()}</p>
-                    ${event.end_datetime ? `<p>結束: ${new Date(event.end_datetime).toLocaleString()}</p>` : ""}
-                    ${event.reminder_datetime ? `<p>提醒: ${new Date(event.reminder_datetime).toLocaleString()}</p>` : ""}
-                  </ion-label>
-                `;
-                eventList.appendChild(item);
-              }
-            }
-          } catch (error) {
-            console.error("獲取事件錯誤:", error);
-            await showToast(`無法載入事件列表: ${error.message || "伺服器響應異常"}`, 3000, "danger");
-          }
-        }
-
         // 載入事件列表
-        await fetchEvents();
+        await window.fetchEvents();
       });
     </script>
   </body>
