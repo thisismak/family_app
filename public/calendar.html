@@ -42,13 +42,13 @@
         </ion-toolbar>
       </ion-header>
       <ion-content>
-        <ion-list>
-          <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>儀表板</ion-item>
-          <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>日曆</ion-item>
-          <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>任務</ion-item>
-          <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>聊天</ion-item>
-          <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>家庭</ion-item>
-          <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>登出</ion-item>
+        <ion-list id="nav-list">
+          <ion-item button id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>儀表板</ion-item>
+          <ion-item button id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>日曆</ion-item>
+          <ion-item button id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>任務</ion-item>
+          <ion-item button id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>聊天</ion-item>
+          <ion-item button id="nav-family"><ion-icon name="people-outline"></ion-icon>家庭</ion-item>
+          <ion-item button id="signOut"><ion-icon name="log-out-outline"></ion-icon>登出</ion-item>
         </ion-list>
       </ion-content>
     </ion-menu>
@@ -201,27 +201,6 @@
       }
     }
 
-    async function checkFamilyStatus(token) {
-      try {
-        const response = await fetch("http://localhost:8100/my-families", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || "無法檢查家庭狀態");
-        }
-        return data.success && data.data && data.data.families && data.data.families.length > 0;
-      } catch (error) {
-        console.error("檢查家庭狀態錯誤:", error);
-        await showToast(`無法檢查家庭狀態: ${error.message}`, 2000, "danger");
-        return false;
-      }
-    }
-
     async function fetchEvents() {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       try {
@@ -244,14 +223,8 @@
       }
     }
 
-    // 初始化
-    document.addEventListener("DOMContentLoaded", async () => {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
-      if (!token) {
-        window.location.href = "/login.html";
-        return;
-      }
-
+    // 導航設置
+    function setupNavigation() {
       const navItems = {
         "nav-dashboard": "/index.html",
         "nav-calendar": "/calendar.html",
@@ -259,62 +232,117 @@
         "nav-chat": "/chat.html",
         "nav-family": "/family.html",
       };
+
+      const navList = document.getElementById("nav-list");
+      if (!navList) {
+        console.error("未找到 nav-list 元素");
+        return;
+      }
+
+      navList.addEventListener("click", (event) => {
+        const item = event.target.closest("ion-item");
+        if (item && item.id in navItems) {
+          const url = navItems[item.id];
+          console.log(`點擊 ${item.id}，正在跳轉到 ${url}`);
+          window.location.href = url;
+        }
+      });
+
+      // 備用：直接綁定 ionClick 事件
       Object.keys(navItems).forEach((id) => {
         const item = document.getElementById(id);
-        item?.addEventListener("click", () => {
-          window.location.href = navItems[id];
-        });
+        if (item) {
+          console.log(`為 ${id} 綁定 ionClick 事件`);
+          item.addEventListener("ionClick", () => {
+            const url = navItems[id];
+            console.log(`ionClick 觸發，跳轉到 ${url}`);
+            window.location.href = url;
+          });
+        } else {
+          console.error(`未找到元素 ${id}`);
+        }
       });
+    }
 
-      document.getElementById("signOut")?.addEventListener("click", () => {
-        localStorage.removeItem("token");
-        sessionStorage.removeItem("token");
+    // 初始化
+    document.addEventListener("DOMContentLoaded", async () => {
+      console.log("DOM 已載入 calendar.html");
+      console.log("Ionic 版本:", window.Ionic?.version || "未載入");
+
+      // 確保選單初始化
+      const menu = document.querySelector("ion-menu");
+      if (menu) {
+        await menu.componentOnReady();
+        console.log("ion-menu 已準備好");
+      } else {
+        console.error("未找到 ion-menu 元素");
+      }
+
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+      if (!token) {
+        console.log("未找到 token，正在跳轉到 /login.html");
         window.location.href = "/login.html";
-      });
-
-      const hasFamily = await checkFamilyStatus(token);
-      if (!hasFamily) {
-        await showToast("您尚未加入任何家庭，請先創建或加入家庭", 3000, "warning");
-        window.location.href = "/family.html";
         return;
+      }
+      console.log("找到 token:", token.substring(0, 20) + "...");
+
+      // 設置導航
+      setupNavigation();
+
+      // 登出
+      const signOut = document.getElementById("signOut");
+      if (signOut) {
+        signOut.addEventListener("click", () => {
+          console.log("點擊登出");
+          localStorage.removeItem("token");
+          sessionStorage.removeItem("token");
+          console.log("已登出，清除 token");
+          window.location.href = "/login.html";
+        });
+      } else {
+        console.error("未找到 signOut 元素");
       }
 
       // 初始化 FullCalendar
       const calendarEl = document.getElementById('calendar');
-      const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        locale: 'zh-tw',
-        headerToolbar: {
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay'
-        },
-        events: async function(fetchInfo, successCallback, failureCallback) {
-          const events = await fetchEvents();
-          successCallback(events.map(event => ({
-            title: event.title,
-            start: event.start_datetime,
-            end: event.end_datetime,
-            extendedProps: {
-              category: event.category,
-              reminder: event.reminder_datetime,
-            },
-          })));
-        },
-        eventClick: function(info) {
-          const event = info.event;
-          showToast(
-            `事件: ${event.title}\n開始: ${dayjs(event.start).format('YYYY-MM-DD HH:mm')}\n類別: ${event.extendedProps.category || '無'}`,
-            3000,
-            "primary"
-          );
-        },
-      });
-      calendar.render();
+      if (calendarEl) {
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+          initialView: 'dayGridMonth',
+          locale: 'zh-tw',
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+          },
+          events: async function(fetchInfo, successCallback, failureCallback) {
+            const events = await fetchEvents();
+            successCallback(events.map(event => ({
+              title: event.title,
+              start: event.start_datetime,
+              end: event.end_datetime,
+              extendedProps: {
+                category: event.category,
+                reminder: event.reminder_datetime,
+              },
+            })));
+          },
+          eventClick: function(info) {
+            const event = info.event;
+            showToast(
+              `事件: ${event.title}\n開始: ${dayjs(event.start).format('YYYY-MM-DD HH:mm')}\n類別: ${event.extendedProps.category || '無'}`,
+              3000,
+              "primary"
+            );
+          },
+        });
+        calendar.render();
 
-      // 將 calendar API 暴露給 React 組件
-      const calendarApp = document.getElementById('event-form-root')._reactRootContainer._internalRoot.current.memoizedState.element.props.children[1].props;
-      calendarApp.setCalendarApi(calendar);
+        // 將 calendar API 暴露給 React 組件
+        const calendarApp = document.getElementById('event-form-root')._reactRootContainer._internalRoot.current.memoizedState.element.props.children[1].props;
+        calendarApp.setCalendarApi(calendar);
+      } else {
+        console.error("未找到 calendar 元素");
+      }
     });
   </script>
 </body>
