@@ -31,6 +31,17 @@
       .ant-picker-input > input {
         font-size: 16px;
       }
+      /* Style for highlighted event dates */
+      ion-datetime {
+        --background: #fff;
+        --ion-color-primary: #3880ff;
+      }
+      ion-datetime .calendar-day.has-event {
+        background-color: #e6f3ff;
+        border-radius: 50%;
+        color: #3880ff;
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
@@ -67,6 +78,14 @@
             <h2>您的家庭日曆</h2>
             <p>查看和管理家庭事件。</p>
           </div>
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>月曆視圖</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <ion-datetime></ion-datetime>
+            </ion-card-content>
+          </ion-card>
           <ion-card>
             <ion-card-header>
               <ion-card-title>事件列表</ion-card-title>
@@ -228,6 +247,9 @@
     </script>
 
     <script>
+      // Global events storage
+      window.events = [];
+
       // Global showToast function
       window.showToast = async function (message, duration, color) {
         if (window.Ionic) {
@@ -263,13 +285,13 @@
           const eventList = document.getElementById("event-list");
           eventList.innerHTML = "";
 
-          const events = Array.isArray(data.data.events) ? data.data.events : [];
-          console.log("處理事件數據:", events);
+          window.events = Array.isArray(data.data.events) ? data.data.events : [];
+          console.log("處理事件數據:", window.events);
 
-          if (events.length === 0) {
+          if (window.events.length === 0) {
             eventList.innerHTML = `<ion-item><ion-label>未找到事件</ion-label></ion-item>`;
           } else {
-            for (const event of events) {
+            for (const event of window.events) {
               const item = document.createElement("ion-item");
               item.innerHTML = `
                 <ion-label>
@@ -281,6 +303,19 @@
               `;
               eventList.appendChild(item);
             }
+          }
+
+          // Highlight event dates in calendar
+          const calendar = document.querySelector("ion-datetime");
+          if (calendar) {
+            const eventDates = window.events.map(event => 
+              new Date(event.start_datetime).toISOString().split('T')[0]
+            );
+            calendar.highlightedDates = eventDates.map(date => ({
+              date,
+              textColor: '#3880ff',
+              backgroundColor: '#e6f3ff'
+            }));
           }
         } catch (error) {
           console.error("獲取事件錯誤:", error);
