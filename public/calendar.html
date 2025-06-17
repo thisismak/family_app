@@ -1,349 +1,371 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>S&S 家庭應用程式 - 日曆</title>
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core@7.2.1/dist/ionic/ionic.esm.js"></script>
-  <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core@7.2.1/dist/ionic/ionic.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.2.1/css/ionic.bundle.min.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/5.6.4/antd.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" />
-  <link rel="stylesheet" href="/styles.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
-  <style>
-    ion-avatar {
-      width: 40px;
-      height: 40px;
-      margin-right: 8px;
-    }
-    body {
-      font-family: Microsoft JhengHei, Poppins, sans-serif;
-      padding: 20px;
-    }
-    .ant-picker, .ant-select {
-      width: 100%;
-    }
-    #calendar {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    .form-container {
-      margin-bottom: 20px;
-    }
-  </style>
-</head>
-<body>
-  <ion-app>
-    <ion-menu content-id="main-content" side="start">
-      <ion-header>
-        <ion-toolbar>
-          <ion-title>選單</ion-title>
-        </ion-toolbar>
-      </ion-header>
-      <ion-content>
-        <ion-list id="nav-list">
-          <ion-item button id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>儀表板</ion-item>
-          <ion-item button id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>日曆</ion-item>
-          <ion-item button id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>任務</ion-item>
-          <ion-item button id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>聊天</ion-item>
-          <ion-item button id="nav-family"><ion-icon name="people-outline"></ion-icon>家庭</ion-item>
-          <ion-item button id="signOut"><ion-icon name="log-out-outline"></ion-icon>登出</ion-item>
-        </ion-list>
-      </ion-content>
-    </ion-menu>
-    <div class="ion-page" id="main-content">
-      <ion-header>
-        <ion-toolbar>
-          <ion-buttons slot="start">
-            <ion-menu-button></ion-menu-button>
-          </ion-buttons>
-          <ion-title>S&S 家庭應用程式 - 日曆</ion-title>
-        </ion-toolbar>
-      </ion-header>
-      <ion-content class="ion-padding">
-        <img src="/assets/family-logo.png" alt="家庭標誌" class="family-logo" />
-        <div class="welcome-message">
-          <h2>您的家庭日曆</h2>
-          <p>管理您的家庭活動與日程。</p>
-        </div>
-        <ion-card class="form-container">
-          <ion-card-header>
-            <ion-card-title>新增事件</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <div id="event-form-root"></div>
-          </ion-card-content>
-        </ion-card>
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>日曆視圖</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <div id="calendar"></div>
-          </ion-card-content>
-        </ion-card>
-      </ion-content>
-      <ion-footer>
-        <ion-toolbar>
-          <ion-title size="small" class="ion-text-center">
-            © 2025 S&S 家庭應用程式。版權所有。
-          </ion-title>
-        </ion-toolbar>
-      </ion-footer>
-    </div>
-  </ion-app>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>S&S Family App - Calendar</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core@7.2.1/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core@7.2.1/dist/ionic/ionic.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core@7.2.1/css/ionic.bundle.min.css" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <!-- Ant Design CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd/5.6.4/antd.min.css" />
+    <!-- React, ReactDOM, Babel, Day.js, and Ant Design JS -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.13/dayjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/antd/5.6.4/antd.min.js"></script>
+    <style>
+      ion-avatar {
+        width: 40px;
+        height: 40px;
+        margin-right: 8px;
+      }
+      /* Ensure Ant Design DatePicker aligns with Ionic styling */
+      .ant-picker {
+        width: 100%;
+        font-family: 'Poppins', sans-serif;
+      }
+      .ant-picker-input > input {
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <ion-app>
+      <ion-menu content-id="main-content" side="start">
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>選單</ion-title>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content>
+          <ion-list>
+            <ion-item id="nav-dashboard"><ion-icon name="home-outline"></ion-icon>儀表板</ion-item>
+            <ion-item id="nav-calendar"><ion-icon name="calendar-outline"></ion-icon>日曆</ion-item>
+            <ion-item id="nav-tasks"><ion-icon name="checkbox-outline"></ion-icon>任務</ion-item>
+            <ion-item id="nav-chat"><ion-icon name="chatbubble-outline"></ion-icon>聊天</ion-item>
+            <ion-item id="nav-family"><ion-icon name="people-outline"></ion-icon>家庭</ion-item>
+            <ion-item id="signOut"><ion-icon name="log-out-outline"></ion-icon>登出</ion-item>
+          </ion-list>
+        </ion-content>
+      </ion-menu>
+      <div class="ion-page" id="main-content">
+        <ion-header>
+          <ion-toolbar>
+            <ion-buttons slot="start">
+              <ion-menu-button></ion-menu-button>
+            </ion-buttons>
+            <ion-title>S&S 家庭應用程式 - 日曆</ion-title>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content class="ion-padding">
+          <img src="/assets/family-logo.png" alt="家庭標誌" class="family-logo" />
+          <div class="welcome-message">
+            <h2>您的家庭日曆</h2>
+            <p>查看和管理家庭事件。</p>
+          </div>
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>事件列表</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <ion-list id="event-list">
+                <ion-item>
+                  <ion-label>載入中...</ion-label>
+                </ion-item>
+              </ion-list>
+            </ion-card-content>
+          </ion-card>
+          <ion-card>
+            <ion-card-header>
+              <ion-card-title>創建事件</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <div id="create-event-root" class="ion-padding"></div>
+            </ion-card-content>
+          </ion-card>
+        </ion-content>
+        <ion-footer>
+          <ion-toolbar>
+            <ion-title size="small" class="ion-text-center">
+              © 2025 S&S 家庭應用程式。版權所有。
+            </ion-title>
+          </ion-toolbar>
+        </ion-footer>
+      </div>
+    </ion-app>
 
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.13/dayjs.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.13/locale/zh-tw.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/antd/5.6.4/antd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/zh-tw.js"></script>
+    <script type="text/babel">
+      const { DatePicker, Button, Input } = window.antd;
+      const { useState } = React;
 
-  <script type="text/babel">
-    const { Form, Input, Button, DatePicker, Select } = window.antd;
-    const { useState } = React;
-    dayjs.locale('zh-tw');
+      const CreateEventForm = ({ onSubmit, showToast }) => {
+        const [title, setTitle] = useState('');
+        const [startDateTime, setStartDateTime] = useState(null);
+        const [endDateTime, setEndDateTime] = useState(null);
+        const [reminderDateTime, setReminderDateTime] = useState(null);
 
-    // 事件表單組件
-    const EventForm = ({ onEventCreated }) => {
-      const [form] = Form.useForm();
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+          const eventData = {
+            title,
+            start_datetime: startDateTime ? startDateTime.toISOString() : null,
+            end_datetime: endDateTime ? endDateTime.toISOString() : null,
+            reminder_datetime: reminderDateTime ? reminderDateTime.toISOString() : null,
+          };
+          console.log("正在創建事件:", eventData);
+          await onSubmit(eventData);
+          // Reset form
+          setTitle('');
+          setStartDateTime(null);
+          setEndDateTime(null);
+          setReminderDateTime(null);
+        };
 
-      const onFinish = async (values) => {
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-        try {
-          const response = await fetch("http://localhost:8100/calendar", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              title: values.title,
-              start_datetime: values.dates[0].toISOString(),
-              end_datetime: values.dates[1].toISOString(),
-              category: values.category,
-              reminder_datetime: values.reminder ? values.reminder.toISOString() : null,
-            }),
-          });
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error || "無法創建事件");
+        return (
+          <form onSubmit={handleSubmit}>
+            <ion-grid>
+              <ion-row>
+                <ion-col>
+                  <ion-item>
+                    <Input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="輸入事件標題"
+                      required
+                    />
+                  </ion-item>
+                </ion-col>
+              </ion-row>
+              <ion-row>
+                <ion-col>
+                  <ion-item>
+                    <DatePicker
+                      showTime
+                      value={startDateTime}
+                      onChange={setStartDateTime}
+                      placeholder="選擇開始時間"
+                      needConfirm
+                      required
+                    />
+                  </ion-item>
+                </ion-col>
+              </ion-row>
+              <ion-row>
+                <ion-col>
+                  <ion-item>
+                    <DatePicker
+                      showTime
+                      value={endDateTime}
+                      onChange={setEndDateTime}
+                      placeholder="選擇結束時間"
+                      needConfirm
+                    />
+                  </ion-item>
+                </ion-col>
+              </ion-row>
+              <ion-row>
+                <ion-col>
+                  <ion-item>
+                    <DatePicker
+                      showTime
+                      value={reminderDateTime}
+                      onChange={setReminderDateTime}
+                      placeholder="選擇提醒時間"
+                      needConfirm
+                    />
+                  </ion-item>
+                </ion-col>
+              </ion-row>
+              <ion-row>
+                <ion-col>
+                  <Button type="primary" htmlType="submit" block>
+                    創建事件
+                  </Button>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </form>
+        );
+      };
+
+      const App = () => {
+        async function showToast(message, duration, color) {
+          if (window.Ionic) {
+            const toast = document.createElement("ion-toast");
+            toast.message = message;
+            toast.duration = duration;
+            toast.color = color;
+            document.body.appendChild(toast);
+            await toast.present();
+          } else {
+            alert(message);
           }
-          showToast("事件創建成功", 2000, "success");
-          form.resetFields();
-          onEventCreated();
-        } catch (error) {
-          showToast(`創建事件失敗: ${error.message}`, 3000, "danger");
         }
+
+        async function handleSubmit(eventData) {
+          const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+          try {
+            const response = await fetch("http://localhost:8100/calendar", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(eventData),
+            });
+            const data = await response.json();
+            console.log("創建事件回應:", data);
+            if (!response.ok) {
+              throw new Error(data.error || "無法創建事件");
+            }
+            await showToast(`事件已創建 (ID: ${data.data.event_id})`, 2000, "success");
+            await fetchEvents();
+          } catch (error) {
+            console.error("創建事件錯誤:", error);
+            await showToast(`無法創建事件: ${error.message}`, 2000, "danger");
+          }
+        }
+
+        return <CreateEventForm onSubmit={handleSubmit} showToast={showToast} />;
       };
 
-      return (
-        <Form form={form} onFinish={onFinish} layout="vertical">
-          <Form.Item name="title" label="事件標題" rules={[{ required: true, message: '請輸入事件標題' }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="dates" label="開始與結束時間" rules={[{ required: true, message: '請選擇時間範圍' }]}>
-            <DatePicker.RangePicker showTime={{ format: 'HH' }} />
-          </Form.Item>
-          <Form.Item name="category" label="類別" rules={[{ required: true, message: '請選擇類別' }]}>
-            <Select>
-              <Select.Option value="family">家庭</Select.Option>
-              <Select.Option value="work">工作</Select.Option>
-              <Select.Option value="school">學校</Select.Option>
-              <Select.Option value="personal">個人</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="reminder" label="提醒時間">
-            <DatePicker showTime={{ format: 'HH' }} />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit">新增事件</Button>
-          </Form.Item>
-        </Form>
-      );
-    };
+      // Render the React component
+      ReactDOM.render(<App />, document.getElementById("create-event-root"));
+    </script>
 
-    // 主應用組件
-    const CalendarApp = () => {
-      const [calendarApi, setCalendarApi] = useState(null);
-
-      const handleEventCreated = () => {
-        if (calendarApi) {
-          calendarApi.refetchEvents();
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        console.log("DOM 已載入 calendar.html");
+        console.log("Ionic 版本:", window.Ionic?.version || "未載入");
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+        if (!token) {
+          console.log("未找到 token，正在跳轉到 /login.html");
+          window.location.href = "/login.html";
+          return;
         }
-      };
+        console.log("找到 token:", token.substring(0, 20) + "...");
 
-      return (
-        <div>
-          <EventForm onEventCreated={handleEventCreated} />
-          <div id="calendar-root"></div>
-        </div>
-      );
-    };
-
-    ReactDOM.render(<CalendarApp />, document.getElementById('event-form-root'));
-
-    // 全局函數
-    async function showToast(message, duration, color) {
-      if (window.Ionic) {
-        const toast = document.createElement("ion-toast");
-        toast.message = message;
-        toast.duration = duration;
-        toast.color = color;
-        document.body.appendChild(toast);
-        await toast.present();
-      } else {
-        alert(message);
-      }
-    }
-
-    async function fetchEvents() {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      try {
-        const response = await fetch("http://localhost:8100/calendar", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || "無法獲取事件");
-        }
-        return Array.isArray(data.data.events) ? data.data.events : [];
-      } catch (error) {
-        console.error("獲取事件錯誤:", error);
-        await showToast(`無法載入事件: ${error.message}`, 3000, "danger");
-        return [];
-      }
-    }
-
-    // 導航設置
-    function setupNavigation() {
-      const navItems = {
-        "nav-dashboard": "/index.html",
-        "nav-calendar": "/calendar.html",
-        "nav-tasks": "/tasks.html",
-        "nav-chat": "/chat.html",
-        "nav-family": "/family.html",
-      };
-
-      const navList = document.getElementById("nav-list");
-      if (!navList) {
-        console.error("未找到 nav-list 元素");
-        return;
-      }
-
-      navList.addEventListener("click", (event) => {
-        const item = event.target.closest("ion-item");
-        if (item && item.id in navItems) {
-          const url = navItems[item.id];
-          console.log(`點擊 ${item.id}，正在跳轉到 ${url}`);
-          window.location.href = url;
-        }
-      });
-
-      // 備用：直接綁定 ionClick 事件
-      Object.keys(navItems).forEach((id) => {
-        const item = document.getElementById(id);
-        if (item) {
-          console.log(`為 ${id} 綁定 ionClick 事件`);
-          item.addEventListener("ionClick", () => {
+        // 選單導航
+        const navItems = {
+          "nav-dashboard": "/index.html",
+          "nav-calendar": "/calendar.html",
+          "nav-tasks": "/tasks.html",
+          "nav-chat": "/chat.html",
+          "nav-family": "/family.html",
+        };
+        Object.keys(navItems).forEach((id) => {
+          const item = document.getElementById(id);
+          item?.addEventListener("click", () => {
             const url = navItems[id];
-            console.log(`ionClick 觸發，跳轉到 ${url}`);
+            console.log(`正在跳轉到 ${url}`);
             window.location.href = url;
           });
-        } else {
-          console.error(`未找到元素 ${id}`);
-        }
-      });
-    }
+        });
 
-    // 初始化
-    document.addEventListener("DOMContentLoaded", async () => {
-      console.log("DOM 已載入 calendar.html");
-      console.log("Ionic 版本:", window.Ionic?.version || "未載入");
-
-      // 確保選單初始化
-      const menu = document.querySelector("ion-menu");
-      if (menu) {
-        await menu.componentOnReady();
-        console.log("ion-menu 已準備好");
-      } else {
-        console.error("未找到 ion-menu 元素");
-      }
-
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
-      if (!token) {
-        console.log("未找到 token，正在跳轉到 /login.html");
-        window.location.href = "/login.html";
-        return;
-      }
-      console.log("找到 token:", token.substring(0, 20) + "...");
-
-      // 設置導航
-      setupNavigation();
-
-      // 登出
-      const signOut = document.getElementById("signOut");
-      if (signOut) {
-        signOut.addEventListener("click", () => {
+        // 登出
+        document.getElementById("signOut")?.addEventListener("click", () => {
           console.log("點擊登出");
           localStorage.removeItem("token");
           sessionStorage.removeItem("token");
           console.log("已登出，清除 token");
           window.location.href = "/login.html";
         });
-      } else {
-        console.error("未找到 signOut 元素");
-      }
 
-      // 初始化 FullCalendar
-      const calendarEl = document.getElementById('calendar');
-      if (calendarEl) {
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-          initialView: 'dayGridMonth',
-          locale: 'zh-tw',
-          headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay'
-          },
-          events: async function(fetchInfo, successCallback, failureCallback) {
-            const events = await fetchEvents();
-            successCallback(events.map(event => ({
-              title: event.title,
-              start: event.start_datetime,
-              end: event.end_datetime,
-              extendedProps: {
-                category: event.category,
-                reminder: event.reminder_datetime,
+        async function showToast(message, duration, color) {
+          if (window.Ionic) {
+            const toast = document.createElement("ion-toast");
+            toast.message = message;
+            toast.duration = duration;
+            toast.color = color;
+            document.body.appendChild(toast);
+            await toast.present();
+          } else {
+            alert(message);
+          }
+        }
+
+        async function checkFamilyStatus() {
+          try {
+            console.log("檢查用戶家庭狀態");
+            const response = await fetch("http://localhost:8100/my-families", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
               },
-            })));
-          },
-          eventClick: function(info) {
-            const event = info.event;
-            showToast(
-              `事件: ${event.title}\n開始: ${dayjs(event.start).format('YYYY-MM-DD HH:mm')}\n類別: ${event.extendedProps.category || '無'}`,
-              3000,
-              "primary"
-            );
-          },
-        });
-        calendar.render();
+            });
+            const data = await response.json();
+            console.log("檢查家庭狀態回應:", JSON.stringify(data, null, 2));
+            if (!response.ok) {
+              throw new Error(data.error || "無法檢查家庭狀態");
+            }
+            return data.success && data.data && data.data.families && data.data.families.length > 0;
+          } catch (error) {
+            console.error("檢查家庭狀態錯誤:", error);
+            await showToast(`無法檢查家庭狀態: ${error.message}`, 2000, "danger");
+            return false;
+          }
+        }
 
-        // 將 calendar API 暴露給 React 組件
-        const calendarApp = document.getElementById('event-form-root')._reactRootContainer._internalRoot.current.memoizedState.element.props.children[1].props;
-        calendarApp.setCalendarApi(calendar);
-      } else {
-        console.error("未找到 calendar 元素");
-      }
-    });
-  </script>
-</body>
+        // 檢查家庭狀態
+        const hasFamily = await checkFamilyStatus();
+        if (!hasFamily) {
+          await showToast("您尚未加入任何家庭，請先創建或加入家庭", 3000, "warning");
+          window.location.href = "/family.html";
+          return;
+        }
+
+        async function fetchEvents() {
+          try {
+            console.log("正在獲取事件列表");
+            const response = await fetch("http://localhost:8100/calendar", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            const data = await response.json();
+            console.log("獲取事件回應:", data);
+            if (!response.ok) {
+              throw new Error(data.error || "無法獲取事件");
+            }
+
+            const eventList = document.getElementById("event-list");
+            eventList.innerHTML = "";
+
+            const events = Array.isArray(data.data.events) ? data.data.events : [];
+            console.log("處理事件數據:", events);
+
+            if (events.length === 0) {
+              eventList.innerHTML = `<ion-item><ion-label>未找到事件</ion-label></ion-item>`;
+            } else {
+              for (const event of events) {
+                const item = document.createElement("ion-item");
+                item.innerHTML = `
+                  <ion-label>
+                    <h2>${event.title}</h2>
+                    <p>開始: ${new Date(event.start_datetime).toLocaleString()}</p>
+                    ${event.end_datetime ? `<p>結束: ${new Date(event.end_datetime).toLocaleString()}</p>` : ""}
+                    ${event.reminder_datetime ? `<p>提醒: ${new Date(event.reminder_datetime).toLocaleString()}</p>` : ""}
+                  </ion-label>
+                `;
+                eventList.appendChild(item);
+              }
+            }
+          } catch (error) {
+            console.error("獲取事件錯誤:", error);
+            await showToast(`無法載入事件列表: ${error.message || "伺服器響應異常"}`, 3000, "danger");
+          }
+        }
+
+        // 載入事件列表
+        await fetchEvents();
+      });
+    </script>
+  </body>
 </html>
